@@ -6,6 +6,7 @@ class JobProvider extends ChangeNotifier {
   final JobService _jobService = JobService();
 
   bool isLoading = true;
+  bool hasError = false;
   String _searchTerm = '';
   List<JobModel> _jobs = [];
 
@@ -17,9 +18,11 @@ class JobProvider extends ChangeNotifier {
     _jobService.getJobsStream().listen((jobs) {
       _jobs = jobs;
       isLoading = false;
+      hasError = false;
       notifyListeners();
-    }, onError: (error) {
+    }, onError: (_) {
       isLoading = false;
+      hasError = true;
       notifyListeners();
     });
   }

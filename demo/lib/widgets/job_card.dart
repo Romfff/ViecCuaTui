@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../models/job_model.dart';
 
 const Color kPrimary = Color(0xFF43E8D8);
+const Color kPrimaryDark = Color(0xFF00B0A0);
+const Color kNavy = Color(0xFF0D1B4B);
 
-/// Card hiển thị thông tin job (UI tương tự mẫu bạn gửi).
+/// Card hiển thị thông tin job.
 class JobCardItem extends StatelessWidget {
   final JobModel job;
   final VoidCallback? onTap;
@@ -14,120 +16,175 @@ class JobCardItem extends StatelessWidget {
     this.onTap,
   });
 
+  Color get _avatarColor {
+    final colors = [
+      const Color(0xFF5B6EF5),
+      const Color(0xFFFF6B6B),
+      const Color(0xFF00B0A0),
+      const Color(0xFFFFB347),
+      const Color(0xFF9B59B6),
+    ];
+    final idx = job.company.isEmpty ? 0 : job.company.codeUnitAt(0) % colors.length;
+    return colors[idx];
+  }
+
   @override
   Widget build(BuildContext context) {
     final companyInitial = job.company.isNotEmpty ? job.company[0].toUpperCase() : '?';
-    final locationText = job.location;
+    final avatarColor = _avatarColor;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.symmetric(vertical: 7),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: kPrimary.withOpacity(0.35), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Logo (placeholder)
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: kPrimary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  companyInitial,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    color: kPrimary.withOpacity(0.95),
-                  ),
+            // Left accent bar
+            Positioned(
+              left: 0,
+              top: 16,
+              bottom: 16,
+              child: Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: avatarColor,
+                  borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
                 ),
               ),
             ),
-            const SizedBox(width: 12),
 
-            // Main content
-            Expanded(
-              child: Column(
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    job.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: kPrimary,
+                  // Company avatar
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: BoxDecoration(
+                      color: avatarColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  ),
-
-                  const SizedBox(height: 6),
-
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 16, color: kPrimary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Lương',
-                        style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 6,
-                    children: [
-                      _Pill(text: job.salary, bg: kPrimary.withOpacity(0.12), fg: kPrimary),
-                      _Pill(text: locationText, bg: kPrimary.withOpacity(0.12), fg: kPrimary),
-                    ],
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  Text(
-                    job.company,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          job.postedDate,
-                          style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600),
+                    child: Center(
+                      child: Text(
+                        companyInitial,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 22,
+                          color: avatarColor,
                         ),
                       ),
-                      _IconCircle(
-                        icon: Icons.search,
-                        onTap: () {
-                          // Không ảnh hưởng logic điều hướng chính (InkWell đã xử lý).
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      _IconCircle(
-                        icon: Icons.favorite_border,
-                        onTap: () {},
-                      ),
-                    ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title + Type badge
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                job.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: kNavy,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                            if (job.type.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: kPrimary.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  job.type,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: kPrimaryDark,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+
+                        // Company name
+                        Text(
+                          job.company,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Salary + Location pills
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            _InfoPill(
+                              icon: Icons.attach_money_rounded,
+                              text: job.salary,
+                              color: const Color(0xFF2ECC71),
+                            ),
+                            _InfoPill(
+                              icon: Icons.location_on_outlined,
+                              text: job.location,
+                              color: const Color(0xFF3498DB),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Posted date + action icons
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 13, color: Colors.grey.shade400),
+                            const SizedBox(width: 4),
+                            Text(
+                              job.postedDate,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade400,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const Spacer(),
+                            _SmallIconBtn(icon: Icons.bookmark_border_rounded, onTap: () {}),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -139,7 +196,64 @@ class JobCardItem extends StatelessWidget {
   }
 }
 
-/// Card hiển thị "Top Employers" (thanh ngang).
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  const _InfoPill({required this.icon, required this.text, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color.withOpacity(0.9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallIconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _SmallIconBtn({required this.icon, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, size: 16, color: Colors.grey.shade500),
+      ),
+    );
+  }
+}
+
+/// Card "Top Employers" cuộn ngang.
 class TopEmployerCard extends StatelessWidget {
   final String companyName;
   final int jobCount;
@@ -156,189 +270,126 @@ class TopEmployerCard extends StatelessWidget {
     this.onTap,
   });
 
+  Color get _avatarColor {
+    final colors = [
+      const Color(0xFF5B6EF5),
+      const Color(0xFFFF6B6B),
+      const Color(0xFF00B0A0),
+      const Color(0xFFFFB347),
+      const Color(0xFF9B59B6),
+    ];
+    final idx = companyName.isEmpty ? 0 : companyName.codeUnitAt(0) % colors.length;
+    return colors[idx];
+  }
+
   @override
   Widget build(BuildContext context) {
     final initial = companyName.isNotEmpty ? companyName[0].toUpperCase() : '?';
+    final avatarColor = _avatarColor;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
+    return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 260,
+        width: 200,
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 58,
-                  height: 58,
+                  width: 46,
+                  height: 46,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: kPrimary.withOpacity(0.08),
+                    color: avatarColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: Text(
                       initial,
                       style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        fontSize: 26,
-                        color: kPrimary,
+                        fontSize: 20,
+                        color: avatarColor,
                       ),
                     ),
                   ),
                 ),
                 const Spacer(),
-                Chip(
-                  label: Text('$jobCount Jobs'),
-                  backgroundColor: kPrimary.withOpacity(0.12),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            const SizedBox(height: 8),
-
-            Text(
-              companyName,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: kPrimary.withOpacity(0.95),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: tags
-                  .map(
-                    (t) => Chip(
-                      label: Text(t),
-                      backgroundColor: kPrimary.withOpacity(0.10),
-                      side: BorderSide(color: kPrimary.withOpacity(0.18)),
-                    ),
-                  )
-                  .toList(),
-            ),
-
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16, color: kPrimary),
-                const SizedBox(width: 6),
-                Expanded(
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: kPrimary.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Text(
-                    location,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: kPrimary.withOpacity(0.95),
-                      fontWeight: FontWeight.w600,
+                    '$jobCount việc',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: kPrimaryDark,
                     ),
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
+            Text(
+              companyName,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: kNavy,
+              ),
+            ),
+            if (location.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(Icons.location_on_outlined, size: 12, color: Colors.grey.shade400),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(
+                      location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (tags.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: tags.take(3).map((t) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F4FF),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(t, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF5B6EF5))),
+                )).toList(),
+              ),
+            ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SmallBadge extends StatelessWidget {
-  final String text;
-  final Color bg;
-  final Color fg;
-
-  const _SmallBadge({
-    required this.text,
-    required this.bg,
-    required this.fg,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: fg,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.2,
-        ),
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  final String text;
-  final Color bg;
-  final Color fg;
-
-  const _Pill({
-    required this.text,
-    required this.bg,
-    required this.fg,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: fg),
-      ),
-    );
-  }
-}
-
-class _IconCircle extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  const _IconCircle({required this.icon, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Icon(icon, size: 18, color: Colors.grey.shade700),
       ),
     );
   }

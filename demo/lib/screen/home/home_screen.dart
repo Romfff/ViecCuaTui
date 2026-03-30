@@ -1,574 +1,704 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../../models/job_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
-import '../../models/job_model.dart';
-import '../../widgets/job_card.dart';
 import '../profile/profile_screen.dart';
 import 'job_detail_screen.dart';
 
-const Color kPrimary = Color(0xFF43E8D8);
-const Color kPrimaryDark = Color(0xFF1EC5B2);
+const _cNavy = Color(0xFF0D1B4B);
+const _cTurquoise = Color(0xFF43E8D8);
+const _cTurquoiseDim = Color(0xFF2DD4BF);
+const _cBg = Color(0xFFF8F9FA);
+const _cSurface = Color(0xFFFFFFFF);
+const _cTextPrimary = Color(0xFF0D1B4B);
+const _cTextSub = Color(0xFF6B7280);
+const _cInputFill = Color(0xFFF3F4F6);
+const _cCardRadius = 16.0;
+
+const _kSoftShadow = BoxShadow(
+  color: Color(0x0A000000),
+  blurRadius: 12,
+  offset: Offset(0, 4),
+);
+
+const _kFilters = ['Tất cả', 'Full-time', 'Part-time', 'Remote', 'Intern'];
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  HomeScreenState createState() => HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final ScrollController _topEmployersScrollController = ScrollController();
+class _HomeScreenState extends State<HomeScreen> {
+  String _activeFilter = 'Tất cả';
 
-  String _selectedCity = 'All Cities';
-  String _keyword = '';
-
-  // Web runtime đôi khi có thể gặp giá trị dynamic/undefined => không gọi trực tiếp .trim() nữa.
-  String _safeTrim(dynamic v) {
-    if (v == null) return '';
-    return v.toString().trim();
-  }
-
-  static const List<String> _suggestions = [
-    'Java',
-    'ReactJS',
-    '.NET',
-    'Tester',
-    'PHP',
-    'Business Analysis',
-    'NodeJS',
-    'Agile',
-    'DevOps',
-    'Cloud',
-    'Team Management',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    // Reset filter để tránh bị "dính" keyword/city cũ khi đổi role hoặc mở lại Home.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      _searchController.clear();
-      _keyword = '';
-      _selectedCity = 'All Cities';
-      context.read<JobProvider>().setSearchTerm('');
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _topEmployersScrollController.dispose();
-    super.dispose();
-  }
-
-  void _syncSearch(JobProvider jobProv) {
-    final keyword = _safeTrim(_keyword);
-    if (keyword.isNotEmpty) {
-      jobProv.setSearchTerm(keyword);
-      return;
-    }
-    if (_selectedCity != 'All Cities') {
-      jobProv.setSearchTerm(_selectedCity);
-      return;
-    }
-    jobProv.setSearchTerm('');
-  }
-
-  void _openMenu(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(Icons.person),
-                title: Text('Hồ sơ'),
-                subtitle: Text(auth.user?.email ?? ''),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen()));
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.logout, color: kPrimary),
-                title: Text('Đăng xuất', style: TextStyle(color: kPrimary)),
-                onTap: () {
-                  auth.logout();
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _AppLogo({required String title}) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.16),
-            border: Border.all(color: Colors.white.withOpacity(0.22), width: 1),
-          ),
-          child: Icon(Icons.work_outline, size: 18, color: Colors.white),
-        ),
-        const SizedBox(width: 10),
-        ShaderMask(
-          shaderCallback: (rect) {
-            return const LinearGradient(
-              colors: [Colors.white, Colors.white70],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(rect);
-          },
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0.3,
-            ),
-          ),
-        ),
-      ],
-    );
+  List<JobModel> _applyFilter(List<JobModel> jobs) {
+    if (_activeFilter == 'Tất cả') return jobs;
+    return jobs
+        .where((j) => j.type.toLowerCase().contains(_activeFilter.toLowerCase()))
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final jobProv = context.watch<JobProvider>();
-    final jobs = jobProv.jobs;
     final auth = context.watch<AuthProvider>();
+    final jobProv = context.watch<JobProvider>();
+    final filtered = _applyFilter(jobProv.jobs);
 
     return Scaffold(
-      backgroundColor: kPrimary.withOpacity(0.06),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [kPrimaryDark, kPrimary],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
+      backgroundColor: _cBg,
+      floatingActionButton: auth.role == 'job_poster'
+          ? FloatingActionButton.extended(
+              backgroundColor: _cTurquoise,
+              foregroundColor: _cNavy,
+              elevation: 2,
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Đăng tin', style: TextStyle(fontWeight: FontWeight.w800)),
+              onPressed: () => _showCreateJobDialog(context, auth, jobProv),
+            )
+          : null,
+      body: CustomScrollView(
+        slivers: [
+          _CustomSliverAppBar(auth: auth),
+          SliverToBoxAdapter(
+            child: _FilterSection(
+              activeFilter: _activeFilter,
+              onFilterChanged: (f) => setState(() => _activeFilter = f),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
               child: Row(
                 children: [
-                  IconButton(
-                    icon: Icon(Icons.menu, color: Colors.white),
-                    onPressed: () => _openMenu(context),
-                  ),
-                  Expanded(
-                    child: Center(
-                      child: _AppLogo(title: 'ViecCuaTui'),
+                  const Text(
+                    'Việc làm dành cho bạn',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: _cTextPrimary,
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(Icons.notifications_outlined, color: Colors.white),
-                    onPressed: () {},
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.person_outline, color: Colors.white),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => ProfileScreen()),
+                  const Spacer(),
+                  if (!jobProv.isLoading && !jobProv.hasError)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _cTurquoise.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${filtered.length} việc',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _cTurquoiseDim,
+                        ),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Tìm việc làm',
-                            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            _safeTrim(_keyword).isNotEmpty
-                                ? '${jobs.length} jobs cho "${_safeTrim(_keyword)}"'
-                                : '${jobs.length} jobs',
-                            style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
-                          ),
-                          SizedBox(height: 12),
-
-                          // City dropdown + keyword search
-                          Row(
-                            children: [
-                              Expanded(
-                                flex: 2,
-                                child: Container(
-                                  height: 52,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedCity,
-                                      isExpanded: true,
-                                      items: const [
-                                        DropdownMenuItem(value: 'All Cities', child: Text('All Cities')),
-                                        DropdownMenuItem(value: 'Hà Nội', child: Text('Hà Nội')),
-                                        DropdownMenuItem(value: 'Hồ Chí Minh', child: Text('Hồ Chí Minh')),
-                                      ],
-                                      onChanged: (v) {
-                                        if (v == null) return;
-                                        setState(() => _selectedCity = v);
-                                        _syncSearch(jobProv);
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                                          child: TextField(
-                                            controller: _searchController,
-                                            textAlignVertical: TextAlignVertical.center,
-                                            onChanged: (value) {
-                                              setState(() => _keyword = value);
-                                              _syncSearch(jobProv);
-                                            },
-                                            decoration: InputDecoration(
-                                              prefixIcon: Icon(Icons.search, color: kPrimary),
-                                              hintText: 'Enter keyword skill (Java, IOS...)',
-                                              border: InputBorder.none,
-                                              // Giúp placeholder/text nằm giữa đúng với height ~52
-                                              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 0),
-                                              isDense: true,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      Container(
-                                        width: 52,
-                                        height: 52,
-                                        decoration: BoxDecoration(
-                                          color: kPrimary,
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: IconButton(
-                                          icon: Icon(Icons.search, color: Colors.white),
-                                          onPressed: () => _syncSearch(jobProv),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          SizedBox(height: 12),
-
-                          Text(
-                            'Gợi ý cho bạn:',
-                            style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600),
-                          ),
-                          SizedBox(height: 8),
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 8,
-                            children: _suggestions.map((s) {
-                              return ActionChip(
-                                label: Text(s),
-                                backgroundColor: Colors.white,
-                                shape: StadiumBorder(
-                                  side: BorderSide(color: Colors.grey.shade300),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _keyword = s;
-                                    _selectedCity = 'All Cities';
-                                    _searchController.text = s;
-                                  });
-                                  jobProv.setSearchTerm(s);
-                                },
-                              );
-                            }).toList(),
-                          ),
-
-                          SizedBox(height: 18),
-                          _buildTopEmployers(jobs: jobs),
-                          SizedBox(height: 12),
-                        ],
-                      ),
-                    ),
-
-                    if (jobProv.isLoading)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (jobs.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: Text(
-                            'Không tìm thấy công việc phù hợp',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      )
-                    else
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) => JobCardItem(
-                            job: jobs[index],
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => JobDetailScreen(job: jobs[index]),
-                              ),
-                            ),
-                          ),
-                          childCount: jobs.length,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: auth.role == 'job_poster'
-          ? FloatingActionButton.extended(
-              icon: Icon(Icons.add),
-              label: Text('Đăng tin'),
-              onPressed: () => _showCreateJobDialog(context),
-            )
-          : null,
-    );
-  }
-
-  Widget _buildTopEmployers({required List<JobModel> jobs}) {
-    if (jobs.isEmpty) return SizedBox.shrink();
-
-    final counts = <String, int>{};
-    for (final j in jobs) {
-      final key = _safeTrim(j.company);
-      if (key.isEmpty) continue;
-      counts[key] = (counts[key] ?? 0) + 1;
-    }
-
-    final sortedCompanies = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-
-    final top = sortedCompanies.take(4).toList();
-    if (top.isEmpty) return SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Top Employers',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-        ),
-        SizedBox(height: 10),
-        SizedBox(
-          height: 230, // tránh overflow khi nội dung chip/badge cao
-          child: Scrollbar(
-            controller: _topEmployersScrollController,
-            thumbVisibility: true,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onHorizontalDragUpdate: (details) {
-                try {
-                  final max = _topEmployersScrollController.position.maxScrollExtent;
-                  final next = (_topEmployersScrollController.offset - details.delta.dx).clamp(0.0, max);
-                  _topEmployersScrollController.jumpTo(next);
-                } catch (_) {
-                  // Có thể chưa attach controller, bỏ qua.
-                }
-              },
-              child: ListView.separated(
-                controller: _topEmployersScrollController,
-                scrollDirection: Axis.horizontal,
-                primary: false,
-                physics: const ClampingScrollPhysics(),
-                itemCount: top.length,
-                separatorBuilder: (_, __) => SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final companyName = top[index].key;
-                  final jobCount = top[index].value;
-                  final companyJobs = jobs.where((e) => _safeTrim(e.company) == companyName).toList();
-                  final location = companyJobs.isNotEmpty ? companyJobs.first.location : '';
-
-                  final tagSet = <String>{};
-                  for (final j in companyJobs) {
-                    final t = _safeTrim(j.type);
-                    if (t.isEmpty) continue;
-                    tagSet.add(t);
-                  }
-                  final tags = tagSet.take(4).toList();
-
-                  final initial = companyName.isNotEmpty ? companyName[0].toUpperCase() : '?';
-                  return TopEmployerCard(
-                    companyName: companyName,
-                    jobCount: jobCount,
-                    location: location,
-                    tags: tags,
-                    onTap: null,
-                  );
-                },
-              ),
-            ),
           ),
-        ),
-      ],
+          _buildBody(jobProv, filtered),
+        ],
+      ),
     );
   }
 
-  void _showCreateJobDialog(BuildContext context) {
-    final auth = context.read<AuthProvider>();
-    final titleController = TextEditingController();
-    final companyController = TextEditingController();
-    final locationController = TextEditingController();
-    final salaryController = TextEditingController();
-    final typeController = TextEditingController();
-    final descriptionController = TextEditingController();
-
-    if (auth.role != 'job_poster') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Chỉ người đăng việc mới có quyền đăng tin.')),
-      );
-      return;
+  Widget _buildBody(JobProvider jobProv, List<JobModel> filtered) {
+    if (jobProv.isLoading) {
+      return const SliverFillRemaining(hasScrollBody: false, child: _LoadingState());
     }
+    if (jobProv.hasError) {
+      return const SliverFillRemaining(hasScrollBody: false, child: _ErrorState());
+    }
+    if (filtered.isEmpty) {
+      return const SliverFillRemaining(hasScrollBody: false, child: _EmptyState());
+    }
+    return _JobListView(filtered: filtered);
+  }
+
+  void _showCreateJobDialog(BuildContext context, AuthProvider auth, JobProvider jobProv) {
+    final titleCtrl = TextEditingController();
+    final companyCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final salaryCtrl = TextEditingController();
+    final typeCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Thêm công việc mới'),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: _cSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          'Đăng tin tuyển dụng',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _cNavy),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: titleController, decoration: InputDecoration(labelText: 'Tiêu đề')),
-              TextField(controller: companyController, decoration: InputDecoration(labelText: 'Công ty')),
-              TextField(controller: locationController, decoration: InputDecoration(labelText: 'Địa điểm')),
-              TextField(controller: salaryController, decoration: InputDecoration(labelText: 'Lương')),
-              TextField(controller: typeController, decoration: InputDecoration(labelText: 'Loại công việc')),
-              TextField(controller: descriptionController, decoration: InputDecoration(labelText: 'Mô tả'), maxLines: 3),
+              _DialogField(ctrl: titleCtrl, label: 'Tiêu đề', icon: Icons.title_rounded),
+              const SizedBox(height: 10),
+              _DialogField(ctrl: companyCtrl, label: 'Công ty', icon: Icons.business_rounded),
+              const SizedBox(height: 10),
+              _DialogField(ctrl: locationCtrl, label: 'Địa điểm', icon: Icons.location_on_outlined),
+              const SizedBox(height: 10),
+              _DialogField(ctrl: salaryCtrl, label: 'Mức lương', icon: Icons.attach_money_rounded),
+              const SizedBox(height: 10),
+              _DialogField(ctrl: typeCtrl, label: 'Loại công việc', icon: Icons.work_outline_rounded),
+              const SizedBox(height: 10),
+              _DialogField(ctrl: descCtrl, label: 'Mô tả', icon: Icons.description_outlined, maxLines: 3),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Hủy')),
-          ElevatedButton(
-            onPressed: () async {
-              final auth = context.read<AuthProvider>();
-              final jobProv = context.read<JobProvider>();
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: _cTextSub)),
+          ),
+          GestureDetector(
+            onTap: () async {
               final job = JobModel(
                 id: '',
-                title: titleController.text.trim(),
-                company: companyController.text.trim(),
-                location: locationController.text.trim(),
-                salary: salaryController.text.trim(),
-                type: typeController.text.trim(),
-                description: descriptionController.text.trim(),
+                title: titleCtrl.text.trim(),
+                company: companyCtrl.text.trim(),
+                location: locationCtrl.text.trim(),
+                salary: salaryCtrl.text.trim(),
+                type: typeCtrl.text.trim(),
+                description: descCtrl.text.trim(),
                 postedDate: 'Mới đăng',
                 posterId: auth.user?.uid ?? '',
                 posterEmail: auth.user?.email ?? '',
               );
               await jobProv.addJob(job);
-              Navigator.pop(context);
+              if (ctx.mounted) Navigator.pop(ctx);
             },
-            child: Text('Lưu'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_cTurquoise, _cTurquoiseDim]),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Đăng tin',
+                style: TextStyle(color: _cNavy, fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+            ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
     );
   }
 }
 
+class _CustomSliverAppBar extends StatelessWidget {
+  final AuthProvider auth;
 
-class JobCardWidget extends StatelessWidget {
+  const _CustomSliverAppBar({required this.auth});
+
+  String get _displayName {
+    final email = auth.user?.email ?? '';
+    if (email.isEmpty) return 'bạn';
+    return email.split('@').first;
+  }
+
+  String get _initial {
+    final n = _displayName;
+    return n.isNotEmpty ? n[0].toUpperCase() : '?';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverAppBar(
+      expandedHeight: 132,
+      pinned: true,
+      automaticallyImplyLeading: false,
+      backgroundColor: _cSurface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+      title: Text(
+        'Hi, $_displayName',
+        style: const TextStyle(
+          color: _cNavy,
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 16),
+          child: GestureDetector(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            child: _NavyAvatar(initial: _initial, size: 36, fontSize: 14),
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        collapseMode: CollapseMode.pin,
+        background: Container(
+          color: _cSurface,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hi, $_displayName 👋',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: _cNavy,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Tìm công việc phù hợp với bạn',
+                              style: TextStyle(fontSize: 13, color: _cTextSub),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                        child: _NavyAvatar(initial: _initial, size: 48, fontSize: 20),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: const Color(0xFFF3F4F6)),
+      ),
+    );
+  }
+}
+
+class _NavyAvatar extends StatelessWidget {
+  final String initial;
+  final double size;
+  final double fontSize;
+
+  const _NavyAvatar({required this.initial, required this.size, required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: _cNavy.withOpacity(0.08),
+        shape: BoxShape.circle,
+        border: Border.all(color: _cNavy.withOpacity(0.14), width: 1.5),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            color: _cNavy,
+            fontWeight: FontWeight.w800,
+            fontSize: fontSize,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterSection extends StatelessWidget {
+  final String activeFilter;
+  final ValueChanged<String> onFilterChanged;
+
+  const _FilterSection({required this.activeFilter, required this.onFilterChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 4),
+      child: SizedBox(
+        height: 40,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          itemCount: _kFilters.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (_, index) {
+            final filter = _kFilters[index];
+            final isActive = filter == activeFilter;
+            return GestureDetector(
+              onTap: () => onFilterChanged(filter),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                decoration: BoxDecoration(
+                  color: isActive ? _cNavy : _cInputFill,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  filter,
+                  style: TextStyle(
+                    color: isActive ? Colors.white : _cTextSub,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _JobListView extends StatelessWidget {
+  final List<JobModel> filtered;
+
+  const _JobListView({required this.filtered});
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) => Padding(
+            padding: EdgeInsets.only(bottom: index < filtered.length - 1 ? 12 : 0),
+            child: _JobCard(
+              job: filtered[index],
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => JobDetailScreen(job: filtered[index])),
+              ),
+            ),
+          ),
+          childCount: filtered.length,
+        ),
+      ),
+    );
+  }
+}
+
+class _JobCard extends StatelessWidget {
   final JobModel job;
-  const JobCardWidget({super.key, required this.job});
+  final VoidCallback onTap;
+
+  const _JobCard({required this.job, required this.onTap});
+
+  Color _logoColor() {
+    const palette = [
+      Color(0xFF4F46E5),
+      Color(0xFF0891B2),
+      Color(0xFF059669),
+      Color(0xFFD97706),
+      Color(0xFFDC2626),
+      Color(0xFF7C3AED),
+    ];
+    final idx = job.company.isEmpty ? 0 : job.company.codeUnitAt(0) % palette.length;
+    return palette[idx];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _logoColor();
+    final initial = job.company.isNotEmpty ? job.company[0].toUpperCase() : '?';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: _cSurface,
+          borderRadius: BorderRadius.all(Radius.circular(_cCardRadius)),
+          boxShadow: [_kSoftShadow],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _CompanyLogo(initial: initial, color: color),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    job.title.isEmpty ? '—' : job.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: _cTextPrimary,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    job.company.isEmpty ? '—' : job.company,
+                    style: const TextStyle(fontSize: 13, color: _cTextSub, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _ApplyButton(onTap: onTap),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              if (job.salary.isNotEmpty) ...[
+                                _Badge(
+                                  icon: Icons.attach_money_rounded,
+                                  text: job.salary,
+                                  bgColor: _cTurquoise.withOpacity(0.10),
+                                  textColor: _cTurquoiseDim,
+                                ),
+                                const SizedBox(width: 6),
+                              ],
+                              if (job.location.isNotEmpty)
+                                _Badge(
+                                  icon: Icons.location_on_outlined,
+                                  text: job.location,
+                                  bgColor: _cInputFill,
+                                  textColor: _cTextSub,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompanyLogo extends StatelessWidget {
+  final String initial;
+  final Color color;
+
+  const _CompanyLogo({required this.initial, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.14), width: 1),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: color),
+        ),
+      ),
+    );
+  }
+}
+
+class _ApplyButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ApplyButton({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailScreen(job: job))),
-      child: Card(
-        margin: EdgeInsets.symmetric(vertical: 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(14.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(child: Text(job.title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                  Chip(label: Text(job.type, style: TextStyle(color: Colors.white)), backgroundColor: kPrimary),
-                ],
-              ),
-              SizedBox(height: 6),
-              Text(job.company, style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600)),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  Icon(Icons.location_on, size: 16, color: Colors.grey),
-                  SizedBox(width: 4),
-                  Expanded(child: Text(job.location, style: TextStyle(color: Colors.grey[700]))),
-                ],
-              ),
-              SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.monetization_on, size: 16, color: Colors.grey[700]),
-                  SizedBox(width: 4),
-                  Text(job.salary, style: TextStyle(fontWeight: FontWeight.bold)),
-                  Spacer(),
-                  Text(job.postedDate, style: TextStyle(color: Colors.grey[600])),
-                ],
-              ),
-            ],
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_cTurquoise, _cTurquoiseDim],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          'Ứng tuyển',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: _cNavy),
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color bgColor;
+  final Color textColor;
+
+  const _Badge({required this.icon, required this.text, required this.bgColor, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: textColor),
+          const SizedBox(width: 3),
+          Text(text, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textColor)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogField extends StatelessWidget {
+  final TextEditingController ctrl;
+  final String label;
+  final IconData icon;
+  final int maxLines;
+
+  const _DialogField({required this.ctrl, required this.label, required this.icon, this.maxLines = 1});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: ctrl,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: _cTextSub, fontSize: 13),
+        prefixIcon: Icon(icon, size: 18, color: _cTextSub),
+        filled: true,
+        fillColor: _cInputFill,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        focusedBorder: const OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+          borderSide: BorderSide(color: _cTurquoise, width: 1.5),
+        ),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      ),
+    );
+  }
+}
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: _cTurquoise, strokeWidth: 3),
+          SizedBox(height: 16),
+          Text('Đang tải...', style: TextStyle(color: _cTextSub, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  const _ErrorState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
+              child: Icon(Icons.wifi_off_rounded, size: 36, color: Colors.red.shade300),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Không thể tải dữ liệu',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _cTextPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Vui lòng kiểm tra kết nối mạng và thử lại.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: _cTextSub),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: _cTurquoise.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search_off_rounded, size: 40, color: _cTurquoise),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Không tìm thấy công việc',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _cTextPrimary),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Thử thay đổi bộ lọc để xem thêm kết quả.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: _cTextSub),
+            ),
+          ],
         ),
       ),
     );
