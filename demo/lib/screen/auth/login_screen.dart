@@ -94,7 +94,7 @@ class _BrandingSection extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         const Text(
-          'Ứng dụng tìm việcgit add .',
+          'Ứng dụng tìm việc .',
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w900,
