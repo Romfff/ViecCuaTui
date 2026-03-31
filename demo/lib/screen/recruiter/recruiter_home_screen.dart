@@ -4,7 +4,6 @@ import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../profile/profile_screen.dart';
 
-// Color Palette for Recruiter
 const _kNavy = Color(0xFF0D1B4B);
 const _kGreenAccent = Color(0xFF0FB488);
 const _kBg = Color(0xFFF8F9FB);
@@ -62,7 +61,6 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
   }
 }
 
-// --- TRANG 1: DASHBOARD (Bảng điều khiển - Hình 3) ---
 class _DashboardPage extends StatelessWidget {
   final AuthProvider auth;
   const _DashboardPage({required this.auth});
@@ -87,8 +85,6 @@ class _DashboardPage extends StatelessWidget {
             Text('Xin chào, $name', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _kNavy)),
             const Text('Hôm nay có 204 hồ sơ mới đang chờ bạn.', style: TextStyle(color: _kTextSub, fontSize: 14)),
             const SizedBox(height: 30),
-            
-            // Grid Stats
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -115,7 +111,6 @@ class _DashboardPage extends StatelessWidget {
   }
 }
 
-// --- TRANG 2: JOBS (Tin tuyển dụng - Hình 2) ---
 class _JobsManagementPage extends StatelessWidget {
   final JobProvider jobProv;
   final AuthProvider auth;
@@ -137,7 +132,6 @@ class _JobsManagementPage extends StatelessWidget {
               ],
             ),
           ),
-          // Filter Tabs
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -165,7 +159,6 @@ class _JobsManagementPage extends StatelessWidget {
   }
 }
 
-// --- TRANG 3: INTERVIEWS (Phỏng vấn - Hình 4) ---
 class _InterviewsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -178,7 +171,6 @@ class _InterviewsPage extends StatelessWidget {
             const Text('Lịch phỏng vấn', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _kNavy)),
             const Text('Bạn có 3 cuộc phỏng vấn hôm nay', style: TextStyle(color: _kTextSub)),
             const SizedBox(height: 25),
-            // Calendar Strip (Simplified)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -199,7 +191,6 @@ class _InterviewsPage extends StatelessWidget {
   }
 }
 
-// --- TRANG 4: TALENT (Nguồn nhân tài - Hình 1) ---
 class _TalentSourcePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -211,16 +202,14 @@ class _TalentSourcePage extends StatelessWidget {
           children: [
             const Text('Tuyền tập\nNhân tài Ưu tú', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _kNavy)),
             const SizedBox(height: 20),
-            _TalentCard(name: 'Marcus Holloway', role: 'Kiến trúc sư Điện toán Đám mây', experience: '12 Năm', salary: '$185k - $210k'),
-            _TalentCard(name: 'Elena Rodriguez', role: 'Giám đốc Kỹ thuật (VP)', experience: '15 Năm', salary: '$230k - $260k'),
+            _TalentCard(name: 'Marcus Holloway', role: 'Kiến trúc sư Điện toán Đám mây', experience: '12 Năm', salary: r'$185k - $210k'),
+            _TalentCard(name: 'Elena Rodriguez', role: 'Giám đốc Kỹ thuật (VP)', experience: '15 Năm', salary: r'$230k - $260k'),
           ],
         ),
       ),
     );
   }
 }
-
-// --- WIDGETS HỖ TRỢ ---
 
 class _StatCard extends StatelessWidget {
   final String title, value, sub;

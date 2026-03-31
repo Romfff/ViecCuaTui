@@ -1,19 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../provider/auth_provider.dart';
-import 'regrister_screen.dart';
 
-const _cNavy = Color(0xFF0D1B4B);
-const _cTurquoise = Color(0xFF43E8D8);
-const _cTurquoiseDim = Color(0xFF2DD4BF);
-const _cInputFill = Color(0xFFF3F4F6);
-const _cTextSub = Color(0xFF6B7280);
-
-const _kCardShadow = BoxShadow(
-  color: Color(0x0A000000),
-  blurRadius: 12,
-  offset: Offset(0, 4),
-);
+const Color _kAccent = Color(0xFF43E8D8); // Màu Xanh Ngọc mới
+const Color _kNavy = Color(0xFF0D1B4B);
+const Color _kBg = Color(0xFFF1F6F9);
+const Color _kTextSec = Color(0xFF8E8E93);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,12 +18,15 @@ class LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _confirmPasswordController = TextEditingController();
+  String _selectedRole = 'job_seeker';
+  bool _isLoginTab = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -40,297 +35,208 @@ class LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [_cNavy, Color(0xFF162554)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const SizedBox(height: 48),
-                const _BrandingSection(),
-                const SizedBox(height: 40),
-                _FormCard(
-                  formKey: _formKey,
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                  obscurePassword: _obscurePassword,
-                  onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
-                  auth: auth,
-                  mounted: mounted,
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BrandingSection extends StatelessWidget {
-  const _BrandingSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            color: _cTurquoise.withOpacity(0.10),
-            shape: BoxShape.circle,
-            border: Border.all(color: _cTurquoise.withOpacity(0.35), width: 2),
-          ),
-          child: const Icon(Icons.work_outline_rounded, size: 40, color: _cTurquoise),
-        ),
-        const SizedBox(height: 18),
-        const Text(
-          'Ứng dụng tìm việc .',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: Colors.white,
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Tìm việc dễ dàng chỉ trong vài bước',
-          style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.55)),
-        ),
-      ],
-    );
-  }
-}
-
-class _FormCard extends StatelessWidget {
-  final GlobalKey<FormState> formKey;
-  final TextEditingController emailController;
-  final TextEditingController passwordController;
-  final bool obscurePassword;
-  final VoidCallback onToggleObscure;
-  final AuthProvider auth;
-  final bool mounted;
-
-  const _FormCard({
-    required this.formKey,
-    required this.emailController,
-    required this.passwordController,
-    required this.obscurePassword,
-    required this.onToggleObscure,
-    required this.auth,
-    required this.mounted,
-  });
-
-  InputDecoration _fieldDeco({required String label, required IconData icon, Widget? suffix}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: _cTextSub, fontSize: 14),
-      prefixIcon: Icon(icon, color: _cTextSub, size: 20),
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: _cInputFill,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: _cTurquoise, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [_kCardShadow],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Form(
-        key: formKey,
+      backgroundColor: _kNavy,
+      body: SafeArea(
+        bottom: false,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Đăng nhập',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: _cNavy,
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Chào mừng bạn quay trở lại!',
-              style: TextStyle(fontSize: 13, color: _cTextSub),
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: emailController,
-              keyboardType: TextInputType.emailAddress,
-              decoration: _fieldDeco(label: 'Email', icon: Icons.email_outlined),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-                if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+").hasMatch(v)) return 'Email không hợp lệ';
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: passwordController,
-              obscureText: obscurePassword,
-              decoration: _fieldDeco(
-                label: 'Mật khẩu',
-                icon: Icons.lock_outline_rounded,
-                suffix: IconButton(
-                  icon: Icon(
-                    obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: _cTextSub,
-                    size: 20,
-                  ),
-                  onPressed: onToggleObscure,
-                ),
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
-                if (v.length < 6) return 'Mật khẩu ít nhất 6 ký tự';
-                return null;
-              },
-            ),
-            const SizedBox(height: 28),
-            _SubmitButton(
-              label: 'Đăng nhập',
-              isLoading: auth.isLoading,
-              onTap: auth.isLoading
-                  ? null
-                  : () async {
-                      if (formKey.currentState?.validate() ?? false) {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final success = await auth.login(
-                          emailController.text.trim(),
-                          passwordController.text.trim(),
-                        );
-                        if (!mounted) return;
-                        if (success) {
-                          Navigator.pushReplacementNamed(context, '/home');
-                        } else {
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(auth.errorMessage ?? 'Đăng nhập thất bại. Vui lòng thử lại.'),
-                              backgroundColor: Colors.redAccent,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              margin: const EdgeInsets.all(16),
-                            ),
-                          );
-                        }
-                      }
-                    },
-            ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Chưa có tài khoản? ', style: TextStyle(color: _cTextSub, fontSize: 14)),
-                GestureDetector(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                  ),
-                  child: const Text(
-                    'Đăng ký ngay',
-                    style: TextStyle(
-                      color: _cNavy,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(color: _kBg, shape: BoxShape.circle),
+                          child: const Icon(Icons.work, size: 40, color: _kNavy),
+                        ),
+                        const SizedBox(height: 30),
+                        const Text(
+                          'ỨNG DỤNG TÌM\nVIỆC',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _kNavy, letterSpacing: 2.0),
+                        ),
+                        const SizedBox(height: 40),
+                        Row(
+                          children: [
+                            _buildTabItem('ĐĂNG NHẬP', _isLoginTab, () => setState(() => _isLoginTab = true)),
+                            _buildTabItem('ĐĂNG KÝ', !_isLoginTab, () => setState(() => _isLoginTab = false)),
+                          ],
+                        ),
+                        const SizedBox(height: 40),
+                        _buildLabel('EMAIL CỦA BẠN'),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: _inputDeco(hint: '', icon: Icons.alternate_email),
+                          validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
+                        ),
+                        const SizedBox(height: 25),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildLabel('MẬT KHẨU'),
+                            const Text('QUÊN MẬT KHẨU?', style: TextStyle(color: _kAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: _inputDeco(hint: '', icon: Icons.lock_outline),
+                          validator: (v) => (v == null || v.length < 6) ? 'Mật khẩu ít nhất 6 ký tự' : null,
+                        ),
+                        if (!_isLoginTab) ...[
+                          const SizedBox(height: 25),
+                          _buildLabel('NHẬP LẠI MẬT KHẨU'),
+                          TextFormField(
+                            controller: _confirmPasswordController,
+                            obscureText: true,
+                            decoration: _inputDeco(hint: '', icon: Icons.lock_clock_outlined),
+                            validator: (v) => v != _passwordController.text ? 'Mật khẩu không khớp' : null,
+                          ),
+                        ],
+                        const SizedBox(height: 35),
+                        if (!_isLoginTab) ...[
+                          const Text('VAI TRÒ CỦA BẠN', style: TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _RoleCard(
+                                  icon: Icons.person_search,
+                                  label: 'Ứng viên',
+                                  isSelected: _selectedRole == 'job_seeker',
+                                  onTap: () => setState(() => _selectedRole = 'job_seeker'),
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: _RoleCard(
+                                  icon: Icons.business_center,
+                                  label: 'Nhà tuyển dụng',
+                                  isSelected: _selectedRole == 'job_poster',
+                                  onTap: () => setState(() => _selectedRole = 'job_poster'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                        GestureDetector(
+                          onTap: auth.isLoading ? null : _handleAuth,
+                          child: Container(
+                            width: double.infinity,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              color: _kAccent,
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: [BoxShadow(color: _kAccent.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                            ),
+                            child: Center(
+                              child: auth.isLoading
+                                  ? const CircularProgressIndicator(color: _kNavy)
+                                  : const Text('TIẾP TỤC HÀNH TRÌNH', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        if (auth.errorMessage != null)
+                          Text(auth.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                        const SizedBox(height: 40),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  void _handleAuth() async {
+    if (!_formKey.currentState!.validate()) return;
+    final auth = context.read<AuthProvider>();
+    if (_isLoginTab) {
+      final success = await auth.login(_emailController.text.trim(), _passwordController.text.trim());
+      if (success && mounted) Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      final success = await auth.register(_emailController.text.trim(), _passwordController.text.trim(), _selectedRole);
+      if (success && mounted) Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  Widget _buildTabItem(String title, bool isActive, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Text(title, style: TextStyle(color: isActive ? _kAccent : _kTextSec, fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 8),
+            Container(height: 2, color: isActive ? _kAccent : Colors.transparent),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text, style: const TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  InputDecoration _inputDeco({required String hint, required IconData icon}) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, color: const Color(0xFFC7D3E1), size: 20),
+      filled: true,
+      fillColor: _kBg,
+      contentPadding: const EdgeInsets.symmetric(vertical: 20),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+    );
+  }
 }
 
-class _SubmitButton extends StatelessWidget {
+class _RoleCard extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _SubmitButton({required this.label, required this.isLoading, this.onTap});
-
+  final bool isSelected;
+  final VoidCallback onTap;
+  const _RoleCard({required this.icon, required this.label, required this.isSelected, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 56,
+      child: Container(
+        height: 100,
         decoration: BoxDecoration(
-          gradient: onTap != null
-              ? const LinearGradient(
-                  colors: [_cTurquoise, _cTurquoiseDim],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
-              : null,
-          color: onTap == null ? const Color(0xFFE5E7EB) : null,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: onTap != null
-              ? [
-                  BoxShadow(
-                    color: _cTurquoise.withOpacity(0.28),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
+          color: isSelected ? Colors.transparent : _kBg,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: isSelected ? _kAccent : Colors.transparent, width: 2),
         ),
-        child: Center(
-          child: isLoading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(color: _cNavy, strokeWidth: 2.5),
-                )
-              : Text(
-                  label,
-                  style: TextStyle(
-                    color: onTap != null ? _cNavy : _cTextSub,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.3,
-                  ),
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: isSelected ? _kAccent : _kNavy, size: 30),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(color: _kNavy, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, fontSize: 13)),
+          ],
         ),
       ),
     );
