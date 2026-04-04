@@ -22,6 +22,10 @@ class JobService {
     });
   }
 
+  Future<void> deleteJob(String jobId) async {
+    await jobsRef.doc(jobId).delete();
+  }
+
   String _formatPostedDate(Timestamp? timestamp) {
     if (timestamp == null) return 'Mới đăng';
     final diff = DateTime.now().difference(timestamp.toDate());

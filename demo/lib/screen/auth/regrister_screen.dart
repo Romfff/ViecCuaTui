@@ -18,6 +18,7 @@ class RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
+  final _taxController = TextEditingController();
   String _selectedRole = 'job_seeker';
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
@@ -27,6 +28,7 @@ class RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
+    _taxController.dispose();
     super.dispose();
   }
 
@@ -96,6 +98,27 @@ class RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 14),
 
+                      Visibility(
+                      visible: _selectedRole == 'job_poster',
+                      replacement: SizedBox.shrink(),
+                      child: TextFormField(
+                        controller: _taxController,
+                        keyboardType: TextInputType.number,
+                        decoration: _inputDeco(
+                          label: 'Mã số thuế',
+                          icon: Icons.confirmation_number_outlined,
+                        ),
+                        validator: (v) {
+                          if (_selectedRole == 'job_poster') {
+                            if (v == null || v.isEmpty) return 'Vui lòng nhập mã số thuế';
+                            if (v.length < 10 || v.length > 13) return 'Mã số thuế phải từ 10 đến 13 số';
+                            if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Mã số thuế chỉ gồm chữ số';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 14),
                       // Password
                       TextFormField(
                         controller: _passwordController,
@@ -139,7 +162,6 @@ class RegisterScreenState extends State<RegisterScreen> {
                         },
                       ),
                       const SizedBox(height: 22),
-
                       // Role selection
                       Text(
                         'Bạn là',
@@ -174,7 +196,6 @@ class RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                       const SizedBox(height: 26),
-
                       // Register button
                       _GradientButton(
                         label: 'Đăng ký',
@@ -188,6 +209,7 @@ class RegisterScreenState extends State<RegisterScreen> {
                                     _emailController.text.trim(),
                                     _passwordController.text.trim(),
                                     _selectedRole,
+                                    taxCode: _selectedRole == 'job_poster' ? _taxController.text.trim() : null
                                   );
                                   if (!mounted) return;
                                   if (success) {

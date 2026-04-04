@@ -25,16 +25,7 @@ class ProfileScreen extends StatelessWidget {
             expandedHeight: 200,
             pinned: true,
             backgroundColor: _kNavy,
-            leading: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CircleAvatar(
-                backgroundColor: Colors.white.withOpacity(0.15),
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ),
+            automaticallyImplyLeading: false, // Tắt nút back vì đang ở trong Tab
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -180,9 +171,11 @@ class ProfileScreen extends StatelessWidget {
 
                   // Logout button
                   GestureDetector(
-                    onTap: () {
-                      auth.logout();
-                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    onTap: () async {
+                      await auth.logout();
+                      if (context.mounted) {
+                        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                      }
                     },
                     child: Container(
                       height: 52,

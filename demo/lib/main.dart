@@ -5,8 +5,8 @@ import 'firebase_options.dart';
 import 'provider/auth_provider.dart';
 import 'provider/job_provider.dart';
 import 'screen/auth/login_screen.dart';
-import 'screen/auth/regrister_screen.dart';
 import 'screen/home/home_screen.dart';
+import 'screen/recruiter/recruiter_home_screen.dart';
 import 'screen/profile/profile_screen.dart';
 
 void main() async {
@@ -14,7 +14,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -29,20 +29,19 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Tìm việc làm',
+        title: 'ViecCuaTui',
         theme: ThemeData(
           primarySwatch: Colors.indigo,
           scaffoldBackgroundColor: Colors.white,
-          inputDecorationTheme: InputDecorationTheme(
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          fontFamily: 'Roboto',
         ),
-        home: AuthWrapper(),
+        // Để AuthWrapper ở home để tự động điều hướng khi mở app
+        home: const AuthWrapper(),
         routes: {
-          '/login': (_) => LoginScreen(),
-          '/register': (_) => RegisterScreen(),
-          '/home': (_) => HomeScreen(),
-          '/profile': (_) => ProfileScreen(),
+          '/login': (_) => const LoginScreen(),
+          // Quan trọng: /home bây giờ cũng trỏ về AuthWrapper để nó tự quyết định giao diện theo Role
+          '/home': (_) => const AuthWrapper(), 
+          '/profile': (_) => const ProfileScreen(),
         },
       ),
     );
@@ -52,17 +51,20 @@ class MyApp extends StatelessWidget {
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
-  
-  static const bool skipLogin = false;
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    if (skipLogin || auth.user != null) {
-      return HomeScreen();
+    if (auth.user != null) {
+      // Nếu đã đăng nhập, kiểm tra Role
+      if (auth.role == 'job_poster') {
+        return const RecruiterHomeScreen();
+      } else {
+        return const HomeScreen();
+      }
     } else {
-      return LoginScreen();
+      // Nếu chưa đăng nhập, về màn hình Login
+      return const LoginScreen();
     }
   }
 }

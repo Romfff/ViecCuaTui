@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/job_model.dart';
+import 'apply_screen.dart';
 
 const Color _kPrimary = Color(0xFF43E8D8);
 const Color _kPrimaryDark = Color(0xFF00B0A0);
@@ -292,17 +293,10 @@ class JobDetailScreen extends StatelessWidget {
                 ],
               ),
               child: GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Ứng tuyển thành công!'),
-                      backgroundColor: _kPrimaryDark,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      margin: const EdgeInsets.all(16),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ApplyScreen(job: job)),
+                ),
                 child: Container(
                   height: 52,
                   decoration: BoxDecoration(

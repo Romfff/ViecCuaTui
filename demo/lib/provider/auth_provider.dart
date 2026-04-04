@@ -1,5 +1,4 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -57,27 +56,30 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> register(String email, String password, String selectedRole) async {
-    try {
-      isLoading = true;
-      errorMessage = null;
-      notifyListeners();
-      user = await _authService.register(email, password, selectedRole);
-      if (user != null) {
-        role = selectedRole;
-      }
-      return user != null;
-    } on FirebaseAuthException catch (e) {
-      errorMessage = e.message ?? e.code;
-      return false;
-    } catch (e) {
-      errorMessage = e.toString();
-      return false;
-    } finally {
-      isLoading = false;
-      notifyListeners();
+  Future<bool> register(String email, String password, String selectedRole, {String? taxCode}) async {
+  try {
+    isLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    user = await _authService.register(email, password, selectedRole, taxCode: taxCode);
+
+    if (user != null) {
+      role = selectedRole;
     }
+    return user != null;
+  } on FirebaseAuthException catch (e) {
+    errorMessage = e.message ?? e.code;
+    return false;
+  } catch (e) {
+    errorMessage = e.toString();
+    return false;
+  } finally {
+    isLoading = false;
+    notifyListeners();
   }
+}
+
 
   Future<void> logout() async {
     await _authService.logout();

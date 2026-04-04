@@ -15,28 +15,29 @@ class AuthService {
     return result.user;
   }
 
-  Future<User?> register(String email, String password, String role) async {
-    final result = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    final user = result.user;
-    if (user != null) {
-      try {
-        await usersRef.doc(user.uid).set({
-          'email': email,
-          'role': role,
-          'createdAt': FieldValue.serverTimestamp(),
-        }).timeout(const Duration(seconds: 20));
-        print('Firestore user document created for ${user.uid}');
-      } catch (error) {
-        // Throw so AuthProvider can set errorMessage and stop loading UI.
-        print('Firestore write failed during register: $error');
-        throw error;
-      }
+  Future<User?> register(String email, String password, String role, {String? taxCode}) async {
+  final result = await _auth.createUserWithEmailAndPassword(
+    email: email,
+    password: password,
+  );
+  final user = result.user;
+  if (user != null) {
+    try {
+      await usersRef.doc(user.uid).set({
+        'email': email,
+        'role': role,
+        if (role == 'job_poster') 'taxCode': taxCode, // chỉ lưu nếu là nhà tuyển dụng
+        'createdAt': FieldValue.serverTimestamp(),
+      }).timeout(const Duration(seconds: 20));
+      print('Firestore user document created for ${user.uid}');
+    } catch (error) {
+      print('Firestore write failed during register: $error');
+      rethrow;
     }
-    return user;
   }
+  return user;
+}
+
 
   Future<void> logout() async {
     await _auth.signOut();
