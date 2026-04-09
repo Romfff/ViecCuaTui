@@ -50,7 +50,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
-        title: const Text('?ng tuy?n'),
+        title: const Text('Ứng tuyển'),
         backgroundColor: _kPrimary,
         elevation: 0,
       ),
@@ -64,27 +64,27 @@ class _ApplyScreenState extends State<ApplyScreen> {
               children: [
                 _buildJobHeader(),
                 const SizedBox(height: 20),
-                _buildSectionTitle('Th�ng tin c� nh�n'),
+                _buildSectionTitle('Thông tin cá nhân'),
                 const SizedBox(height: 12),
-                _buildTextField(controller: _nameController, label: 'H? v� t�n', hint: 'Nguy?n Van A'),
+                _buildTextField(controller: _nameController, label: 'Họ và tên', hint: 'Nguyễn Văn A'),
                 const SizedBox(height: 12),
                 _buildTextField(controller: _emailController, label: 'Email', hint: 'email@example.com', keyboardType: TextInputType.emailAddress),
                 const SizedBox(height: 12),
-                _buildTextField(controller: _phoneController, label: 'S? di?n tho?i', hint: '0912345678', keyboardType: TextInputType.phone),
+                _buildTextField(controller: _phoneController, label: 'Số điện thoại', hint: '0912345678', keyboardType: TextInputType.phone),
                 const SizedBox(height: 12),
-                _buildTextField(controller: _addressController, label: '�?a ch?', hint: 'H� N?i'),
+                _buildTextField(controller: _addressController, label: 'Địa chỉ', hint: 'Hà Nội'),
                 const SizedBox(height: 20),
-                _buildSectionTitle('Th�ng tin c�ng vi?c'),
+                _buildSectionTitle('Thông tin công việc'),
                 const SizedBox(height: 12),
-                _buildTextField(controller: _positionController, label: 'V? tr� ?ng tuy?n', hint: widget.job.title),
+                _buildTextField(controller: _positionController, label: 'Vị trí ứng tuyển', hint: widget.job.title),
                 const SizedBox(height: 12),
-                _buildMultilineField(controller: _experienceController, label: 'Kinh nghi?m l�m vi?c', hint: 'M� t? c�c v? tr�, d? �n, nhi?m v?...'),
+                _buildMultilineField(controller: _experienceController, label: 'Kinh nghiệm làm việc', hint: 'Mô tả các vị trí, dự án, nhiệm vụ...'),
                 const SizedBox(height: 12),
-                _buildMultilineField(controller: _educationController, label: 'H?c v?n', hint: 'Tru?ng, chuy�n ng�nh, b?ng c?p...'),
+                _buildMultilineField(controller: _educationController, label: 'Học vấn', hint: 'Trường, chuyên ngành, bằng cấp...'),
                 const SizedBox(height: 12),
-                _buildTextField(controller: _skillsController, label: 'K? nang ch�nh', hint: 'Flutter, Dart, UI/UX, Agile'),
+                _buildTextField(controller: _skillsController, label: 'Kỹ năng chính', hint: 'Flutter, Dart, UI/UX, Agile'),
                 const SizedBox(height: 12),
-                _buildMultilineField(controller: _coverLetterController, label: 'Thu xin vi?c', hint: 'Gi?i thi?u ng?n g?n v� sao b?n ph� h?p...'),
+                _buildMultilineField(controller: _coverLetterController, label: 'Thư xin việc', hint: 'Giới thiệu ngắn gọn và lý do bạn phù hợp...'),
                 const SizedBox(height: 28),
                 _buildSubmitButton(),
               ],
@@ -107,7 +107,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('?ng tuy?n cho', style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text('Ứng tuyển cho', style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           Text(widget.job.title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _kNavy)),
           const SizedBox(height: 4),
@@ -147,7 +147,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Vui l�ng nh?p ${label.toLowerCase()}';
+              return 'Vui lòng nhập ${label.toLowerCase()}';
             }
             return null;
           },
@@ -174,7 +174,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Vui l�ng nh?p ${label.toLowerCase()}';
+              return 'Vui lòng nhập ${label.toLowerCase()}';
             }
             return null;
           },
@@ -202,7 +202,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   height: 20,
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                 )
-              : const Text('G?i h? so ?ng tuy?n', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+              : const Text('Gửi hồ sơ ứng tuyển', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
         ),
       ),
     );

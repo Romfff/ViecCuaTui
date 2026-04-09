@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/job_model.dart';
+import '../../provider/auth_provider.dart';
 import 'apply_screen.dart';
 
 const Color _kPrimary = Color(0xFF43E8D8);
@@ -24,6 +26,8 @@ class JobDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isBookmarked = auth.bookmarkedJobIds.contains(job.id);
     final avatarColor = _avatarColor;
     final initial = job.company.isNotEmpty ? job.company[0].toUpperCase() : '?';
 
@@ -54,8 +58,14 @@ class JobDetailScreen extends StatelessWidget {
                     child: CircleAvatar(
                       backgroundColor: Colors.white.withOpacity(0.15),
                       child: IconButton(
-                        icon: const Icon(Icons.bookmark_border_rounded, color: Colors.white, size: 20),
-                        onPressed: () {},
+                        icon: Icon(isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded, color: Colors.white, size: 20),
+                        onPressed: () {
+                          if (auth.user != null) {
+                            auth.toggleBookmark(job.id);
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập để lưu công việc')));
+                          }
+                        },
                       ),
                     ),
                   ),

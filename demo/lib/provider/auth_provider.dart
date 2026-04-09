@@ -1,4 +1,5 @@
-﻿import 'package:firebase_auth/firebase_auth.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -6,6 +7,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   User? user;
   String? role;
+  List<String> bookmarkedJobIds = [];
   bool isLoading = false;
   String? errorMessage;
   AuthProvider() {
@@ -15,6 +17,7 @@ class AuthProvider extends ChangeNotifier {
         await _loadUserRole(user!.uid);
       } else {
         role = null;
+        bookmarkedJobIds = [];
       }
       notifyListeners();
     });
@@ -25,8 +28,10 @@ class AuthProvider extends ChangeNotifier {
       final doc = await _authService.usersRef.doc(uid).get();
       final data = doc.data() as Map<String, dynamic>?;
       role = data?['role'] as String? ?? 'job_seeker';
+      bookmarkedJobIds = List<String>.from(data?['bookmarkedJobIds'] ?? []);
     } catch (_) {
       role = 'job_seeker';
+      bookmarkedJobIds = [];
     }
   }
 
@@ -85,6 +90,23 @@ class AuthProvider extends ChangeNotifier {
     await _authService.logout();
     user = null;
     role = null;
+    bookmarkedJobIds = [];
+    notifyListeners();
+  }
+
+  Future<void> toggleBookmark(String jobId) async {
+    if (user == null) return;
+
+    final isBookmarked = bookmarkedJobIds.contains(jobId);
+    if (isBookmarked) {
+      bookmarkedJobIds.remove(jobId);
+    } else {
+      bookmarkedJobIds.add(jobId);
+    }
+
+    await _authService.usersRef.doc(user!.uid).set({
+      'bookmarkedJobIds': bookmarkedJobIds,
+    }, SetOptions(merge: true));
     notifyListeners();
   }
 }

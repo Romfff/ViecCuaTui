@@ -49,4 +49,8 @@ class JobProvider extends ChangeNotifier {
   Future<void> removeJob(String jobId) async {
     await _jobService.deleteJob(jobId);
   }
+
+  List<JobModel> getBookmarkedJobs(List<String> bookmarkedIds) {
+    return _jobs.where((job) => bookmarkedIds.contains(job.id)).toList();
+  }
 }

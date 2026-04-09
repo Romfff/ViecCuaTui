@@ -27,6 +27,7 @@ class AuthService {
         'email': email,
         'role': role,
         if (role == 'job_poster') 'taxCode': taxCode, // chỉ lưu nếu là nhà tuyển dụng
+        'bookmarkedJobIds': [],
         'createdAt': FieldValue.serverTimestamp(),
       }).timeout(const Duration(seconds: 20));
       print('Firestore user document created for ${user.uid}');

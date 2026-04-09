@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       _buildHomeContent(auth, jobProv),
       const Center(child: Text('Trang Ứng Tuyển', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold))),
-      const Center(child: Text('Trang Đã Lưu', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold))),
+      _buildSavedJobs(auth, jobProv),
       const ProfileScreen(),
     ];
 
@@ -232,6 +232,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return ListView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: jobs.length, itemBuilder: (context, index) => _LatestJobCard(job: jobs[index]));
   }
 
+  Widget _buildSavedJobs(AuthProvider auth, JobProvider jobProv) {
+    if (auth.user == null) {
+      return const Center(child: Text('Vui lòng đăng nhập để xem công việc đã lưu'));
+    }
+    final savedJobs = jobProv.getBookmarkedJobs(auth.bookmarkedJobIds);
+    if (savedJobs.isEmpty) {
+      return const Center(child: Text('Chưa có công việc nào được lưu'));
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: savedJobs.length,
+      itemBuilder: (context, index) => _LatestJobCard(job: savedJobs[index]),
+    );
+  }
+
   Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))]),
@@ -326,8 +341,9 @@ class _LatestJobCard extends StatelessWidget {
   const _LatestJobCard({required this.job});
   @override
   Widget build(BuildContext context) {
-    final auth = context.read<AuthProvider>();
+    final auth = context.watch<AuthProvider>();
     final jobProv = context.read<JobProvider>();
+    final isBookmarked = auth.bookmarkedJobIds.contains(job.id);
     return Container(
       margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]),
@@ -337,14 +353,23 @@ class _LatestJobCard extends StatelessWidget {
             Container(width: 50, height: 50, decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Center(child: Text(job.company.isNotEmpty ? job.company[0] : '?', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _kAccent)))),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(job.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kNavy)), Text(job.company, style: const TextStyle(color: _kTextSec, fontSize: 12))])),
-            IconButton(icon: const Icon(Icons.bookmark_outline, color: _kTextSec), onPressed: () {}),
+            IconButton(
+              icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_outline, color: isBookmarked ? _kAccent : _kTextSec),
+              onPressed: () {
+                if (auth.user != null) {
+                  auth.toggleBookmark(job.id);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập để lưu công việc')));
+                }
+              },
+            ),
             if (auth.user?.uid == job.posterId) IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () => jobProv.removeJob(job.id)),
           ]),
           const SizedBox(height: 12),
           Row(children: [const Icon(Icons.payments_outlined, size: 16, color: _kAccent), const SizedBox(width: 4), Text(job.salary, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _kNavy)), const SizedBox(width: 16), const Icon(Icons.location_on_outlined, size: 16, color: _kAccent), const SizedBox(width: 4), Expanded(child: Text(job.location, style: const TextStyle(fontSize: 13, color: _kNavy), overflow: TextOverflow.ellipsis))]),
           const SizedBox(height: 16),
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Text('MỚI ĐĂNG', style: TextStyle(color: _kAccent, fontSize: 11, fontWeight: FontWeight.bold))),
+            Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Text('MỚI ĐĂNG', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold))),
             ElevatedButton(
               onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailScreen(job: job))),
               style: ElevatedButton.styleFrom(backgroundColor: _kAccent, foregroundColor: _kNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), elevation: 0),
