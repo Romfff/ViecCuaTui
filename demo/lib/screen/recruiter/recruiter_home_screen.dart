@@ -6,6 +6,8 @@ import '../../provider/job_provider.dart';
 import '../../provider/notification_provider.dart';
 import '../notifications/notification_screen.dart';
 import 'post_job_screen.dart';
+import 'edit_job_screen.dart';
+import '../home/job_detail_screen.dart';
 import '../profile/profile_screen.dart';
 
 const _kNavy = Color(0xFF0D1B4B);
@@ -612,7 +614,14 @@ class _JobManageCard extends StatelessWidget {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JobDetailScreen(job: job),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kBg,
                     elevation: 0,
@@ -626,7 +635,14 @@ class _JobManageCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EditJobScreen(job: job),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kBg,
                     elevation: 0,

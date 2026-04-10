@@ -22,6 +22,10 @@ class JobService {
     });
   }
 
+  Future<void> updateJob(JobModel job) async {
+    await jobsRef.doc(job.id).update(job.toMap());
+  }
+
   Future<void> deleteJob(String jobId) async {
     await jobsRef.doc(jobId).delete();
   }

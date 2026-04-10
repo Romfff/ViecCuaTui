@@ -46,6 +46,10 @@ class JobProvider extends ChangeNotifier {
     await _jobService.createJob(job);
   }
 
+  Future<void> updateJob(JobModel job) async {
+    await _jobService.updateJob(job);
+  }
+
   Future<void> removeJob(String jobId) async {
     await _jobService.deleteJob(jobId);
   }
