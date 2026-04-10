@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,12 +9,23 @@ import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../notifications/notification_screen.dart';
 import '../profile/profile_screen.dart';
+import 'filtered_job_list_screen.dart';
 import 'job_detail_screen.dart';
 
 const _kBg = Color(0xFFF8F9FB);
 const _kNavy = Color(0xFF0D1B4B);
 const _kAccent = Color(0xFF43E8D8); // Màu Xanh Ngọc mới
 const _kTextSec = Color(0xFF8E8E93);
+
+class _DesktopScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.unknown,
+      };
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,9 +36,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  String _activeFilter = 'Tất cả';
+  String _activeFilterCategory = 'Địa điểm';
+  Timer? _scrollTimer;
   final _searchController = TextEditingController();
+  final _keywordScrollController = ScrollController();
   final _suggestedScrollController = ScrollController();
+
+  final Map<String, List<String>> _filterOptions = {
+    'Địa điểm': ['Ngẫu nhiên', 'Hà Nội', 'TP HCM', 'Đà Nẵng'],
+    'Mức lương': ['Ngẫu nhiên', 'Dưới 10M', '10-20M', 'Trên 20M'],
+    'Kinh nghiệm': ['Ngẫu nhiên', 'Mới tốt nghiệp', '1-3 năm', '3-5 năm'],
+    'Ngành nghề': ['Ngẫu nhiên', 'IT', 'Marketing', 'Design', 'Sales'],
+  };
+
+  final Map<String, String> _selectedFilterOption = {
+    'Địa điểm': 'Ngẫu nhiên',
+    'Mức lương': 'Ngẫu nhiên',
+    'Kinh nghiệm': 'Ngẫu nhiên',
+    'Ngành nghề': 'Ngẫu nhiên',
+  };
 
   final List<String> _keywords = [
     'Java',
@@ -40,8 +70,16 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _scrollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _scrollSuggestedJobs());
+  }
+
+  @override
   void dispose() {
+    _scrollTimer?.cancel();
     _searchController.dispose();
+    _keywordScrollController.dispose();
     _suggestedScrollController.dispose();
     super.dispose();
   }
@@ -85,10 +123,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildHeader(auth),
             _buildSearchBar(jobProv),
+            _buildFilterChips(jobProv),
             _buildKeywords(jobProv),
             _buildSectionHeader('Gợi ý công việc'),
-            _buildSuggestedJobs(jobProv.jobs),
-            _buildFilterChips(),
+            _buildSuggestedJobs(jobProv.jobs, jobProv),
             _buildSectionHeader('Việc làm mới nhất'),
             _buildLatestJobs(jobProv),
             const SizedBox(height: 100),
@@ -226,39 +264,46 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 12),
         SizedBox(
           height: 42,
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            scrollDirection: Axis.horizontal,
-            itemCount: _keywords.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (context, index) {
-              final keyword = _keywords[index];
-              return GestureDetector(
-                onTap: () {
-                  prov.setSearchTerm(keyword);
-                  _searchController.text = keyword;
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F4F8),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Text(
-                    keyword,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: _kNavy,
+          child: Listener(
+            onPointerSignal: (event) => _handlePointerSignal(event, _keywordScrollController),
+            child: ScrollConfiguration(
+              behavior: _DesktopScrollBehavior(),
+              child: ListView.separated(
+                controller: _keywordScrollController,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: _keywords.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                itemBuilder: (context, index) {
+                  final keyword = _keywords[index];
+                  return GestureDetector(
+                    onTap: () {
+                      prov.setSearchTerm(keyword);
+                      _searchController.text = keyword;
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F4F8),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Text(
+                        keyword,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: _kNavy,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            },
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ],
@@ -292,69 +337,169 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSuggestedJobs(List<JobModel> jobs) {
+  Widget _buildSuggestedJobs(List<JobModel> jobs, JobProvider prov) {
     final count = jobs.length > 5 ? 5 : jobs.length;
     return SizedBox(
       height: 230,
-      child: Scrollbar(
-        controller: _suggestedScrollController,
-        thumbVisibility: true,
-        child: ListView.separated(
-          controller: _suggestedScrollController,
-          shrinkWrap: true,
-          primary: false,
-          dragStartBehavior: DragStartBehavior.start,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
+      child: ScrollConfiguration(
+        behavior: _DesktopScrollBehavior(),
+        child: Listener(
+          onPointerSignal: (event) => _handlePointerSignal(event, _suggestedScrollController),
+          child: Scrollbar(
+            controller: _suggestedScrollController,
+            thumbVisibility: true,
+            child: ListView.separated(
+              controller: _suggestedScrollController,
+              shrinkWrap: true,
+              primary: false,
+              dragStartBehavior: DragStartBehavior.start,
+              physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics(),
+              ),
+              padding: const EdgeInsets.only(left: 20, right: 8),
+              scrollDirection: Axis.horizontal,
+              itemCount: count,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final job = jobs[index];
+                return GestureDetector(
+                  onTap: () => _showFilteredJobList(context, prov, job.title),
+                  child: _SuggestedJobCard(job: job),
+                );
+              },
+            ),
           ),
-          padding: const EdgeInsets.only(left: 20, right: 8),
-          scrollDirection: Axis.horizontal,
-          itemCount: count,
-          separatorBuilder: (_, __) => const SizedBox(width: 16),
-          itemBuilder: (context, index) => _SuggestedJobCard(job: jobs[index]),
         ),
       ),
     );
   }
 
-  Widget _buildFilterChips() {
-    final filters = ['Tất cả', 'Toàn thời gian', 'Bán thời gian'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: filters.map((f) {
-          final isSel = _activeFilter == f;
-          return GestureDetector(
-            onTap: () => setState(() => _activeFilter = f),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration: BoxDecoration(
-                color: isSel ? _kAccent : Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  if (!isSel)
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 10,
-                    ),
-                ],
-              ),
-              child: Text(
-                f,
-                style: TextStyle(
-                  color: isSel ? _kNavy : _kNavy,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
-              ), // Đổi màu text nút active
-            ),
-          );
-        }).toList(),
+  void _scrollSuggestedJobs() {
+    if (!_suggestedScrollController.hasClients) return;
+    final maxScroll = _suggestedScrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) return;
+    const offsetStep = 276.0;
+    final nextOffset = _suggestedScrollController.offset + offsetStep;
+    final target = nextOffset > maxScroll ? 0.0 : nextOffset;
+    _suggestedScrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _showFilteredJobList(BuildContext context, JobProvider prov, String keyword) {
+    final filteredJobs = prov.filterJobs(keyword);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FilteredJobListScreen(
+          title: keyword,
+          jobs: filteredJobs,
+        ),
       ),
     );
   }
 
+  void _handlePointerSignal(PointerSignalEvent event, ScrollController controller) {
+    if (event is PointerScrollEvent && controller.hasClients) {
+      final newOffset = controller.offset + event.scrollDelta.dy;
+      final target = newOffset.clamp(0.0, controller.position.maxScrollExtent);
+      controller.jumpTo(target);
+    }
+  }
+
+  Widget _buildFilterChips(JobProvider prov) {
+    final categories = _filterOptions.keys.toList();
+    final activeOptions = _filterOptions[_activeFilterCategory]!;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ScrollConfiguration(
+            behavior: _DesktopScrollBehavior(),
+            child: SizedBox(
+              height: 56,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: categories.map((category) {
+                    final isSelected = category == _activeFilterCategory;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _activeFilterCategory = category),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? _kAccent.withOpacity(0.15) : Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: isSelected ? _kAccent : Colors.grey.shade200),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                category,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? _kNavy : _kTextSec,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.arrow_drop_down, color: _kAccent, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          ScrollConfiguration(
+            behavior: _DesktopScrollBehavior(),
+            child: SizedBox(
+              height: 42,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: activeOptions.map((option) {
+                    final isSelected = _selectedFilterOption[_activeFilterCategory] == option;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: ActionChip(
+                        label: Text(option),
+                        labelStyle: TextStyle(
+                          color: _kNavy,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                        backgroundColor: isSelected ? _kAccent : const Color(0xFFF1F4F8),
+                        onPressed: () {
+                          setState(() {
+                            _selectedFilterOption[_activeFilterCategory] = option;
+                          });
+                          prov.setSearchTerm(option == 'Ngẫu nhiên' ? '' : option);
+                          _searchController.text = option == 'Ngẫu nhiên' ? '' : option;
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildLatestJobs(JobProvider prov) {
     if (prov.isLoading) return const Center(child: CircularProgressIndicator());
     final jobs = prov.jobs;

@@ -33,7 +33,21 @@ class JobProvider extends ChangeNotifier {
     return _jobs.where((job) {
       return job.title.toLowerCase().contains(term) ||
           job.company.toLowerCase().contains(term) ||
-          job.location.toLowerCase().contains(term);
+          job.location.toLowerCase().contains(term) ||
+          job.salary.toLowerCase().contains(term) ||
+          job.type.toLowerCase().contains(term);
+    }).toList();
+  }
+
+  List<JobModel> filterJobs(String term) {
+    if (term.isEmpty) return _jobs;
+    final lower = term.toLowerCase();
+    return _jobs.where((job) {
+      return job.title.toLowerCase().contains(lower) ||
+          job.company.toLowerCase().contains(lower) ||
+          job.location.toLowerCase().contains(lower) ||
+          job.salary.toLowerCase().contains(lower) ||
+          job.type.toLowerCase().contains(lower);
     }).toList();
   }
 

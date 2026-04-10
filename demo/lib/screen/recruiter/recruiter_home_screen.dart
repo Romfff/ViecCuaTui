@@ -222,16 +222,22 @@ class _JobsManagementPage extends StatelessWidget {
             padding: const EdgeInsets.all(20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
-                  'Quản lý Tin tuyển dụng',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: _kNavy,
+                Expanded(
+                  child: Text(
+                    'Quản lý Tin tuyển dụng',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: _kNavy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 12),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {
@@ -246,6 +252,7 @@ class _JobsManagementPage extends StatelessWidget {
                       label: const Text('Đăng tin mới'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kGreenAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
