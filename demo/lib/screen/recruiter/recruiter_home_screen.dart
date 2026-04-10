@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/notification_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
+import '../../provider/notification_provider.dart';
+import '../notifications/notification_screen.dart';
 import 'post_job_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -39,7 +42,9 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+          ],
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -47,14 +52,37 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
           type: BottomNavigationBarType.fixed,
           selectedItemColor: _kGreenAccent,
           unselectedItemColor: _kTextSub,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 10),
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), activeIcon: Icon(Icons.dashboard), label: 'DASHBOARD'),
-            BottomNavigationBarItem(icon: Icon(Icons.business_center_outlined), activeIcon: Icon(Icons.business_center), label: 'JOBS'),
-            BottomNavigationBarItem(icon: Icon(Icons.event_note_outlined), activeIcon: Icon(Icons.event_note), label: 'INTERVIEWS'),
-            BottomNavigationBarItem(icon: Icon(Icons.groups_outlined), activeIcon: Icon(Icons.groups), label: 'TALENT'),
-            BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'PROFILE'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'DASHBOARD',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.business_center_outlined),
+              activeIcon: Icon(Icons.business_center),
+              label: 'JOBS',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.event_note_outlined),
+              activeIcon: Icon(Icons.event_note),
+              label: 'INTERVIEWS',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.groups_outlined),
+              activeIcon: Icon(Icons.groups),
+              label: 'TALENT',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'PROFILE',
+            ),
           ],
         ),
       ),
@@ -78,13 +106,41 @@ class _DashboardPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                CircleAvatar(backgroundColor: _kNavy, radius: 22, child: Text(name[0].toUpperCase(), style: const TextStyle(color: Colors.white))),
-                const Icon(Icons.notifications_none_rounded, color: _kNavy),
+                CircleAvatar(
+                  backgroundColor: _kNavy,
+                  radius: 22,
+                  child: Text(
+                    name[0].toUpperCase(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationScreen(),
+                    ),
+                  ),
+                  icon: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: _kNavy,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 25),
-            Text('Xin chào, $name', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _kNavy)),
-            const Text('Hôm nay có 204 hồ sơ mới đang chờ bạn.', style: TextStyle(color: _kTextSub, fontSize: 14)),
+            Text(
+              'Xin chào, $name',
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _kNavy,
+              ),
+            ),
+            const Text(
+              'Hôm nay có 204 hồ sơ mới đang chờ bạn.',
+              style: TextStyle(color: _kTextSub, fontSize: 14),
+            ),
             const SizedBox(height: 30),
             GridView.count(
               shrinkWrap: true,
@@ -94,17 +150,52 @@ class _DashboardPage extends StatelessWidget {
               crossAxisSpacing: 15,
               childAspectRatio: 1.4,
               children: [
-                _StatCard(title: 'TIN TUYỂN DỤNG', value: '24', sub: '↗ tăng 12%', color: Colors.blue),
-                _StatCard(title: 'HỒ SƠ MỚI', value: '856', sub: '204 hôm nay', color: Colors.orange),
-                _StatCard(title: 'ĐÃ PHỎNG VẤN', value: '18', sub: 'Tháng này', color: Colors.green),
-                _StatCard(title: 'CHỜ PHỎNG VẤN', value: '42', sub: '! Cần xử lý', color: Colors.red),
+                _StatCard(
+                  title: 'TIN TUYỂN DỤNG',
+                  value: '24',
+                  sub: '↗ tăng 12%',
+                  color: Colors.blue,
+                ),
+                _StatCard(
+                  title: 'HỒ SƠ MỚI',
+                  value: '856',
+                  sub: '204 hôm nay',
+                  color: Colors.orange,
+                ),
+                _StatCard(
+                  title: 'ĐÃ PHỎNG VẤN',
+                  value: '18',
+                  sub: 'Tháng này',
+                  color: Colors.green,
+                ),
+                _StatCard(
+                  title: 'CHỜ PHỎNG VẤN',
+                  value: '42',
+                  sub: '! Cần xử lý',
+                  color: Colors.red,
+                ),
               ],
             ),
             const SizedBox(height: 30),
-            const Text('Ứng viên mới nhất', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _kNavy)),
+            const Text(
+              'Ứng viên mới nhất',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: _kNavy,
+              ),
+            ),
             const SizedBox(height: 15),
-            _CandidateItem(name: 'Alexandra Chen', role: 'Senior UI Designer', match: '98%'),
-            _CandidateItem(name: 'Julian Blackwood', role: 'Product Manager', match: '85%'),
+            _CandidateItem(
+              name: 'Alexandra Chen',
+              role: 'Senior UI Designer',
+              match: '98%',
+            ),
+            _CandidateItem(
+              name: 'Julian Blackwood',
+              role: 'Product Manager',
+              match: '85%',
+            ),
           ],
         ),
       ),
@@ -119,7 +210,9 @@ class _JobsManagementPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final myJobs = jobProv.jobs.where((j) => j.posterId == auth.user?.uid).toList();
+    final myJobs = jobProv.jobs
+        .where((j) => j.posterId == auth.user?.uid)
+        .toList();
     return SafeArea(
       child: Column(
         children: [
@@ -128,19 +221,44 @@ class _JobsManagementPage extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Quản lý Tin tuyển dụng', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: _kNavy)),
+                const Text(
+                  'Quản lý Tin tuyển dụng',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: _kNavy,
+                  ),
+                ),
                 Row(
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => const PostJobScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const PostJobScreen(),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.add_business, size: 18),
                       label: const Text('Đăng tin mới'),
-                      style: ElevatedButton.styleFrom(backgroundColor: _kGreenAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kGreenAccent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
-                    CircleAvatar(backgroundColor: _kGreenAccent, radius: 18, child: const Icon(Icons.person, color: Colors.white, size: 20)),
+                    CircleAvatar(
+                      backgroundColor: _kGreenAccent,
+                      radius: 18,
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -162,7 +280,10 @@ class _JobsManagementPage extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               itemCount: myJobs.isEmpty ? 1 : myJobs.length,
               itemBuilder: (context, index) {
-                if (myJobs.isEmpty) return const Center(child: Text('Bạn chưa có tin tuyển dụng nào.'));
+                if (myJobs.isEmpty)
+                  return const Center(
+                    child: Text('Bạn chưa có tin tuyển dụng nào.'),
+                  );
                 return _JobManageCard(job: myJobs[index]);
               },
             ),
@@ -182,8 +303,18 @@ class _InterviewsPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Lịch phỏng vấn', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: _kNavy)),
-            const Text('Bạn có 3 cuộc phỏng vấn hôm nay', style: TextStyle(color: _kTextSub)),
+            const Text(
+              'Lịch phỏng vấn',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _kNavy,
+              ),
+            ),
+            const Text(
+              'Bạn có 3 cuộc phỏng vấn hôm nay',
+              style: TextStyle(color: _kTextSub),
+            ),
             const SizedBox(height: 25),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -196,8 +327,20 @@ class _InterviewsPage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 30),
-            _InterviewCard(time: '09:00 - 10:00', name: 'Alexander Sterling', role: 'Senior Product Architect', status: 'ĐANG DIỄN RA', isOnline: true),
-            _InterviewCard(time: '13:30 - 14:30', name: 'Minh Anh Nguyễn', role: 'Lead DevOps Engineer', status: 'SẮP TỚI', isOnline: false),
+            _InterviewCard(
+              time: '09:00 - 10:00',
+              name: 'Alexander Sterling',
+              role: 'Senior Product Architect',
+              status: 'ĐANG DIỄN RA',
+              isOnline: true,
+            ),
+            _InterviewCard(
+              time: '13:30 - 14:30',
+              name: 'Minh Anh Nguyễn',
+              role: 'Lead DevOps Engineer',
+              status: 'SẮP TỚI',
+              isOnline: false,
+            ),
           ],
         ),
       ),
@@ -214,12 +357,39 @@ class _TalentSourcePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Tuyền tập\nNhân tài Ưu tú', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: _kNavy)),
+            const Text(
+              'Tuyền tập\nNhân tài Ưu tú',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+                color: _kNavy,
+              ),
+            ),
             const SizedBox(height: 20),
-            _TalentCard(name: 'Marcus Holloway', role: 'Kiến trúc sư Điện toán Đám mây', experience: '12 Năm', salary: '185k - 210k'),
-            _TalentCard(name: 'Elena Rodriguez', role: 'Giám đốc Kỹ thuật (VP)', experience: '15 Năm', salary: '230k - 260k'),
-            _TalentCard(name: 'Marcus Holloway', role: 'Kiến trúc sư Điện toán Đám mây', experience: '12 Năm', salary: r'$185k - $210k'),
-            _TalentCard(name: 'Elena Rodriguez', role: 'Giám đốc Kỹ thuật (VP)', experience: '15 Năm', salary: r'$230k - $260k'),
+            _TalentCard(
+              name: 'Marcus Holloway',
+              role: 'Kiến trúc sư Điện toán Đám mây',
+              experience: '12 Năm',
+              salary: '185k - 210k',
+            ),
+            _TalentCard(
+              name: 'Elena Rodriguez',
+              role: 'Giám đốc Kỹ thuật (VP)',
+              experience: '15 Năm',
+              salary: '230k - 260k',
+            ),
+            _TalentCard(
+              name: 'Marcus Holloway',
+              role: 'Kiến trúc sư Điện toán Đám mây',
+              experience: '12 Năm',
+              salary: r'$185k - $210k',
+            ),
+            _TalentCard(
+              name: 'Elena Rodriguez',
+              role: 'Giám đốc Kỹ thuật (VP)',
+              experience: '15 Năm',
+              salary: r'$230k - $260k',
+            ),
           ],
         ),
       ),
@@ -230,20 +400,52 @@ class _TalentSourcePage extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String title, value, sub;
   final Color color;
-  const _StatCard({required this.title, required this.value, required this.sub, required this.color});
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.sub,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kTextSub)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: _kTextSub,
+            ),
+          ),
           const Spacer(),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: _kNavy)),
-          Text(sub, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.bold)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: _kNavy,
+            ),
+          ),
+          Text(
+            sub,
+            style: TextStyle(
+              fontSize: 11,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -252,20 +454,86 @@ class _StatCard extends StatelessWidget {
 
 class _CandidateItem extends StatelessWidget {
   final String name, role, match;
-  const _CandidateItem({required this.name, required this.role, required this.match});
+  const _CandidateItem({
+    required this.name,
+    required this.role,
+    required this.match,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+      ),
       child: Row(
         children: [
-          CircleAvatar(backgroundColor: Colors.grey.shade200, child: const Icon(Icons.person, color: _kNavy)),
+          CircleAvatar(
+            backgroundColor: Colors.grey.shade200,
+            child: const Icon(Icons.person, color: _kNavy),
+          ),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.bold)), Text(role, style: const TextStyle(fontSize: 12, color: _kTextSub))])),
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: _kGreenAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Text(match, style: const TextStyle(color: _kGreenAccent, fontWeight: FontWeight.bold, fontSize: 12))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  role,
+                  style: const TextStyle(fontSize: 12, color: _kTextSub),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _kGreenAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  match,
+                  style: const TextStyle(
+                    color: _kGreenAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<NotificationProvider>().addNotification(
+                    NotificationModel(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      title: 'Hồ sơ của $name đã được duyệt',
+                      subtitle:
+                          'Ứng viên $name ($role) đã được xác nhận phỏng vấn.',
+                      createdAt: DateTime.now(),
+                    ),
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Đã tạo thông báo duyệt hồ sơ.'),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreenAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  minimumSize: const Size(80, 34),
+                ),
+                child: const Text('Duyệt', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -281,23 +549,96 @@ class _JobManageCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)), child: const Text('ĐANG TUYỂN', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold))),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'ĐANG TUYỂN',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
               const Icon(Icons.more_vert, color: _kTextSub),
             ],
           ),
           const SizedBox(height: 10),
-          Text(job.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: _kNavy)),
+          Text(
+            job.title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w900,
+              color: _kNavy,
+            ),
+          ),
           const SizedBox(height: 5),
-          Row(children: [const Icon(Icons.calendar_today, size: 14, color: _kTextSub), const SizedBox(width: 5), const Text('Đăng: 12/10/2023', style: TextStyle(color: _kTextSub, fontSize: 12)), const SizedBox(width: 15), const Icon(Icons.group_outlined, size: 16, color: _kTextSub), const SizedBox(width: 5), const Text('42 Ứng viên', style: TextStyle(color: _kTextSub, fontSize: 12))]),
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 14, color: _kTextSub),
+              const SizedBox(width: 5),
+              const Text(
+                'Đăng: 12/10/2023',
+                style: TextStyle(color: _kTextSub, fontSize: 12),
+              ),
+              const SizedBox(width: 15),
+              const Icon(Icons.group_outlined, size: 16, color: _kTextSub),
+              const SizedBox(width: 5),
+              const Text(
+                '42 Ứng viên',
+                style: TextStyle(color: _kTextSub, fontSize: 12),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
-          Row(children: [Expanded(child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: _kBg, elevation: 0), child: const Text('Xem chi tiết', style: TextStyle(color: _kNavy)))), const SizedBox(width: 10), Expanded(child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: _kBg, elevation: 0), child: const Text('Chỉnh sửa', style: TextStyle(color: _kNavy))))]),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kBg,
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Xem chi tiết',
+                    style: TextStyle(color: _kNavy),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kBg,
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Chỉnh sửa',
+                    style: TextStyle(color: _kNavy),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -307,24 +648,140 @@ class _JobManageCard extends StatelessWidget {
 class _InterviewCard extends StatelessWidget {
   final String time, name, role, status;
   final bool isOnline;
-  const _InterviewCard({required this.time, required this.name, required this.role, required this.status, required this.isOnline});
+  const _InterviewCard({
+    required this.time,
+    required this.name,
+    required this.role,
+    required this.status,
+    required this.isOnline,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border(left: BorderSide(color: status == 'ĐANG DIỄN RA' ? Colors.green : Colors.orange, width: 4))),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border(
+          left: BorderSide(
+            color: status == 'ĐANG DIỄN RA' ? Colors.green : Colors.orange,
+            width: 4,
+          ),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [Text(time, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)), const SizedBox(width: 10), Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: status == 'ĐANG DIỄN RA' ? Colors.green.shade50 : Colors.orange.shade50, borderRadius: BorderRadius.circular(5)), child: Text(status, style: TextStyle(color: status == 'ĐANG DIỄN RA' ? Colors.green : Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)))]),
+          Row(
+            children: [
+              Text(
+                time,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: status == 'ĐANG DIỄN RA'
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: status == 'ĐANG DIỄN RA'
+                        ? Colors.green
+                        : Colors.orange,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 15),
-          Row(children: [CircleAvatar(radius: 20, backgroundColor: Colors.grey.shade100, child: const Icon(Icons.person)), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Text(role, style: const TextStyle(fontSize: 13, color: _kTextSub))]))]),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.grey.shade100,
+                child: const Icon(Icons.person),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      role,
+                      style: const TextStyle(fontSize: 13, color: _kTextSub),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 15),
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _kBg, borderRadius: BorderRadius.circular(12)), child: Row(children: [Icon(isOnline ? Icons.video_camera_back_outlined : Icons.business_outlined, size: 20, color: _kNavy), const SizedBox(width: 10), Text(isOnline ? 'Google Meet' : 'Văn phòng (P. 402)', style: const TextStyle(fontWeight: FontWeight.w600))])),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _kBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isOnline
+                      ? Icons.video_camera_back_outlined
+                      : Icons.business_outlined,
+                  size: 20,
+                  color: _kNavy,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isOnline ? 'Google Meet' : 'Văn phòng (P. 402)',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 15),
-          Row(children: [Expanded(child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: _kGreenAccent), child: const Text('Tham gia', style: TextStyle(color: Colors.white)))), const SizedBox(width: 10), Expanded(child: OutlinedButton(onPressed: () {}, child: const Text('Xem hồ sơ')))]),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreenAccent,
+                  ),
+                  child: const Text(
+                    'Tham gia',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {},
+                  child: const Text('Xem hồ sơ'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -333,26 +790,119 @@ class _InterviewCard extends StatelessWidget {
 
 class _TalentCard extends StatelessWidget {
   final String name, role, experience, salary;
-  const _TalentCard({required this.name, required this.role, required this.experience, required this.salary});
+  const _TalentCard({
+    required this.name,
+    required this.role,
+    required this.experience,
+    required this.salary,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [CircleAvatar(radius: 25, backgroundColor: Colors.grey.shade200), const SizedBox(width: 15), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: _kNavy)), Text(role, style: const TextStyle(color: _kTextSub, fontSize: 13))]))]),
+          Row(
+            children: [
+              CircleAvatar(radius: 25, backgroundColor: Colors.grey.shade200),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        color: _kNavy,
+                      ),
+                    ),
+                    Text(
+                      role,
+                      style: const TextStyle(color: _kTextSub, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 20),
-          const Text('NĂNG LỰC CỐT LÕI', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: _kTextSub)),
+          const Text(
+            'NĂNG LỰC CỐT LÕI',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: _kTextSub,
+            ),
+          ),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, children: ['AWS', 'Kubernetes', 'Python'].map((s) => Chip(label: Text(s, style: const TextStyle(fontSize: 10)), backgroundColor: _kBg, side: BorderSide.none)).toList()),
+          Wrap(
+            spacing: 8,
+            children: ['AWS', 'Kubernetes', 'Python']
+                .map(
+                  (s) => Chip(
+                    label: Text(s, style: const TextStyle(fontSize: 10)),
+                    backgroundColor: _kBg,
+                    side: BorderSide.none,
+                  ),
+                )
+                .toList(),
+          ),
           const Divider(),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('KINH NGHIỆM', style: TextStyle(fontSize: 10, color: _kTextSub)), Text(experience, style: const TextStyle(fontWeight: FontWeight.bold))]), Column(crossAxisAlignment: CrossAxisAlignment.end, children: [const Text('MONG MUỐN', style: TextStyle(fontSize: 10, color: _kTextSub)), Text(salary, style: const TextStyle(fontWeight: FontWeight.bold))])]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'KINH NGHIỆM',
+                    style: TextStyle(fontSize: 10, color: _kTextSub),
+                  ),
+                  Text(
+                    experience,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text(
+                    'MONG MUỐN',
+                    style: TextStyle(fontSize: 10, color: _kTextSub),
+                  ),
+                  Text(
+                    salary,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 15),
-          SizedBox(width: double.infinity, child: ElevatedButton(onPressed: () {}, style: ElevatedButton.styleFrom(backgroundColor: _kBg, elevation: 0), child: const Text('Xem hồ sơ đầy đủ', style: TextStyle(color: _kNavy)))),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kBg,
+                elevation: 0,
+              ),
+              child: const Text(
+                'Xem hồ sơ đầy đủ',
+                style: TextStyle(color: _kNavy),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -365,16 +915,60 @@ class _TabChip extends StatelessWidget {
   const _TabChip({required this.label, required this.isActive});
   @override
   Widget build(BuildContext context) {
-    return Container(margin: const EdgeInsets.only(right: 10), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), decoration: BoxDecoration(color: isActive ? _kNavy : Colors.white, borderRadius: BorderRadius.circular(12)), child: Text(label, style: TextStyle(color: isActive ? Colors.white : _kNavy, fontWeight: FontWeight.bold, fontSize: 13)));
+    return Container(
+      margin: const EdgeInsets.only(right: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: isActive ? _kNavy : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: isActive ? Colors.white : _kNavy,
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+        ),
+      ),
+    );
   }
 }
 
 class _DateNode extends StatelessWidget {
   final String day, date;
   final bool isSelected;
-  const _DateNode({required this.day, required this.date, this.isSelected = false});
+  const _DateNode({
+    required this.day,
+    required this.date,
+    this.isSelected = false,
+  });
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: isSelected ? _kNavy : Colors.white, borderRadius: BorderRadius.circular(15)), child: Column(children: [Text(day, style: TextStyle(color: isSelected ? Colors.white70 : _kTextSub, fontSize: 10)), Text(date, style: TextStyle(color: isSelected ? Colors.white : _kNavy, fontSize: 18, fontWeight: FontWeight.bold))]));
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isSelected ? _kNavy : Colors.white,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        children: [
+          Text(
+            day,
+            style: TextStyle(
+              color: isSelected ? Colors.white70 : _kTextSub,
+              fontSize: 10,
+            ),
+          ),
+          Text(
+            date,
+            style: TextStyle(
+              color: isSelected ? Colors.white : _kNavy,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

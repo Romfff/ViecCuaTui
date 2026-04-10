@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/job_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
+import '../notifications/notification_screen.dart';
 import '../profile/profile_screen.dart';
 import 'job_detail_screen.dart';
 
@@ -26,7 +27,16 @@ class _HomeScreenState extends State<HomeScreen> {
   final _suggestedScrollController = ScrollController();
 
   final List<String> _keywords = [
-    'Java', 'ReactJS', '.NET', 'Tester', 'PHP', 'Business Analysis', 'NodeJS', 'Agile', 'DevOps', 'Cloud'
+    'Java',
+    'ReactJS',
+    '.NET',
+    'Tester',
+    'PHP',
+    'Business Analysis',
+    'NodeJS',
+    'Agile',
+    'DevOps',
+    'Cloud',
   ];
 
   @override
@@ -43,7 +53,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final List<Widget> pages = [
       _buildHomeContent(auth, jobProv),
-      const Center(child: Text('Trang Ứng Tuyển', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold))),
+      const Center(
+        child: Text(
+          'Trang Ứng Tuyển',
+          style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold),
+        ),
+      ),
       _buildSavedJobs(auth, jobProv),
       const ProfileScreen(),
     ];
@@ -94,8 +109,20 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               width: 45,
               height: 45,
-              decoration: BoxDecoration(color: _kNavy, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18))),
+              decoration: BoxDecoration(
+                color: _kNavy,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -103,15 +130,48 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('CHÀO MỪNG TRỞ LẠI', style: TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold)),
-                Text('Chào $name 👋', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: _kNavy)),
+                const Text(
+                  'CHÀO MỪNG TRỞ LẠI',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: _kTextSec,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Chào $name 👋',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: _kNavy,
+                  ),
+                ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)]),
-            child: const Icon(Icons.notifications_none_rounded, color: _kNavy, size: 24),
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationScreen()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.notifications_none_rounded,
+                color: _kNavy,
+                size: 24,
+              ),
+            ),
           ),
         ],
       ),
@@ -122,11 +182,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 15, offset: const Offset(0, 5))]),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: TextField(
           controller: _searchController,
           onChanged: prov.setSearchTerm,
-          decoration: const InputDecoration(hintText: 'Tìm kiếm công việc, công ty...', hintStyle: TextStyle(color: Colors.grey, fontSize: 14), prefixIcon: Icon(Icons.search_rounded, color: Colors.grey), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(vertical: 15)),
+          decoration: const InputDecoration(
+            hintText: 'Tìm kiếm công việc, công ty...',
+            hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
+            prefixIcon: Icon(Icons.search_rounded, color: Colors.grey),
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.symmetric(vertical: 15),
+          ),
         ),
       ),
     );
@@ -136,7 +212,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text('GỢI Ý TỪ KHÓA', style: TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold))),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20),
+          child: Text(
+            'GỢI Ý TỪ KHÓA',
+            style: TextStyle(
+              fontSize: 10,
+              color: _kTextSec,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
         const SizedBox(height: 12),
         SizedBox(
           height: 42,
@@ -153,13 +239,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   _searchController.text = keyword;
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F4F8),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Text(keyword, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _kNavy)),
+                  child: Text(
+                    keyword,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: _kNavy,
+                    ),
+                  ),
                 ),
               );
             },
@@ -175,8 +271,22 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: _kNavy)),
-          const Text('Xem tất cả', style: TextStyle(fontSize: 13, color: _kAccent, fontWeight: FontWeight.bold)), // Đổi màu
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: _kNavy,
+            ),
+          ),
+          const Text(
+            'Xem tất cả',
+            style: TextStyle(
+              fontSize: 13,
+              color: _kAccent,
+              fontWeight: FontWeight.bold,
+            ),
+          ), // Đổi màu
         ],
       ),
     );
@@ -194,7 +304,9 @@ class _HomeScreenState extends State<HomeScreen> {
           shrinkWrap: true,
           primary: false,
           dragStartBehavior: DragStartBehavior.start,
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           padding: const EdgeInsets.only(left: 20, right: 8),
           scrollDirection: Axis.horizontal,
           itemCount: count,
@@ -217,8 +329,25 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: () => setState(() => _activeFilter = f),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              decoration: BoxDecoration(color: isSel ? _kAccent : Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [if (!isSel) BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)]),
-              child: Text(f, style: TextStyle(color: isSel ? _kNavy : _kNavy, fontWeight: FontWeight.bold, fontSize: 13)), // Đổi màu text nút active
+              decoration: BoxDecoration(
+                color: isSel ? _kAccent : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  if (!isSel)
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                    ),
+                ],
+              ),
+              child: Text(
+                f,
+                style: TextStyle(
+                  color: isSel ? _kNavy : _kNavy,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ), // Đổi màu text nút active
             ),
           );
         }).toList(),
@@ -229,12 +358,20 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildLatestJobs(JobProvider prov) {
     if (prov.isLoading) return const Center(child: CircularProgressIndicator());
     final jobs = prov.jobs;
-    return ListView.builder(shrinkWrap: true, physics: const NeverScrollableScrollPhysics(), padding: const EdgeInsets.symmetric(horizontal: 20), itemCount: jobs.length, itemBuilder: (context, index) => _LatestJobCard(job: jobs[index]));
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: jobs.length,
+      itemBuilder: (context, index) => _LatestJobCard(job: jobs[index]),
+    );
   }
 
   Widget _buildSavedJobs(AuthProvider auth, JobProvider jobProv) {
     if (auth.user == null) {
-      return const Center(child: Text('Vui lòng đăng nhập để xem công việc đã lưu'));
+      return const Center(
+        child: Text('Vui lòng đăng nhập để xem công việc đã lưu'),
+      );
     }
     final savedJobs = jobProv.getBookmarkedJobs(auth.bookmarkedJobIds);
     if (savedJobs.isEmpty) {
@@ -249,26 +386,58 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBottomNav() {
     return Container(
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, -5))]),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
       child: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: _kAccent, // Đổi màu menu đang chọn
         unselectedItemColor: _kTextSec,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
         unselectedLabelStyle: const TextStyle(fontSize: 11),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'KHÁM PHÁ'),
-          BottomNavigationBarItem(icon: Icon(Icons.work_outline), activeIcon: Icon(Icons.work), label: 'ỨNG TUYỂN'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark_outline), activeIcon: Icon(Icons.bookmark), label: 'ĐÃ LƯU'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'HỒ SƠ'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore_outlined),
+            activeIcon: Icon(Icons.explore),
+            label: 'KHÁM PHÁ',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work_outline),
+            activeIcon: Icon(Icons.work),
+            label: 'ỨNG TUYỂN',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark_outline),
+            activeIcon: Icon(Icons.bookmark),
+            label: 'ĐÃ LƯU',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'HỒ SƠ',
+          ),
         ],
       ),
     );
   }
 
-  void _showCreateJobDialog(BuildContext context, AuthProvider auth, JobProvider jobProv) {
+  void _showCreateJobDialog(
+    BuildContext context,
+    AuthProvider auth,
+    JobProvider jobProv,
+  ) {
     final titleCtrl = TextEditingController();
     final companyCtrl = TextEditingController();
     final locationCtrl = TextEditingController();
@@ -280,21 +449,57 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Đăng tin tuyển dụng'),
         content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: titleCtrl, decoration: const InputDecoration(labelText: 'Tiêu đề')),
-            TextField(controller: companyCtrl, decoration: const InputDecoration(labelText: 'Công ty')),
-            TextField(controller: locationCtrl, decoration: const InputDecoration(labelText: 'Địa điểm')),
-            TextField(controller: salaryCtrl, decoration: const InputDecoration(labelText: 'Mức lương')),
-            TextField(controller: typeCtrl, decoration: const InputDecoration(labelText: 'Loại')),
-            TextField(controller: descCtrl, decoration: const InputDecoration(labelText: 'Mô tả'), maxLines: 3),
-          ]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleCtrl,
+                decoration: const InputDecoration(labelText: 'Tiêu đề'),
+              ),
+              TextField(
+                controller: companyCtrl,
+                decoration: const InputDecoration(labelText: 'Công ty'),
+              ),
+              TextField(
+                controller: locationCtrl,
+                decoration: const InputDecoration(labelText: 'Địa điểm'),
+              ),
+              TextField(
+                controller: salaryCtrl,
+                decoration: const InputDecoration(labelText: 'Mức lương'),
+              ),
+              TextField(
+                controller: typeCtrl,
+                decoration: const InputDecoration(labelText: 'Loại'),
+              ),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(labelText: 'Mô tả'),
+                maxLines: 3,
+              ),
+            ],
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: _kAccent),
             onPressed: () async {
-              final job = JobModel(id: '', title: titleCtrl.text, company: companyCtrl.text, location: locationCtrl.text, salary: salaryCtrl.text, type: typeCtrl.text, description: descCtrl.text, postedDate: 'Mới đăng', posterId: auth.user?.uid ?? '', posterEmail: auth.user?.email ?? '');
+              final job = JobModel(
+                id: '',
+                title: titleCtrl.text,
+                company: companyCtrl.text,
+                location: locationCtrl.text,
+                salary: salaryCtrl.text,
+                type: typeCtrl.text,
+                description: descCtrl.text,
+                postedDate: 'Mới đăng',
+                posterId: auth.user?.uid ?? '',
+                posterEmail: auth.user?.email ?? '',
+              );
               await jobProv.addJob(job);
               Navigator.pop(ctx);
             },
@@ -312,24 +517,127 @@ class _SuggestedJobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 260, margin: const EdgeInsets.only(right: 16, bottom: 10), padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]),
+      width: 260,
+      margin: const EdgeInsets.only(right: 16, bottom: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(width: 48, height: 48, decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Center(child: Text(job.company.isNotEmpty ? job.company[0] : '?', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: _kAccent)))),
-            Row(children: [_Badge(text: 'HOT', color: Colors.red.shade100, textColor: Colors.red), const SizedBox(width: 4), _Badge(text: 'GẤP', color: Colors.orange.shade100, textColor: Colors.orange)])
-          ]),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    job.company.isNotEmpty ? job.company[0] : '?',
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: _kAccent,
+                    ),
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  _Badge(
+                    text: 'HOT',
+                    color: Colors.red.shade100,
+                    textColor: Colors.red,
+                  ),
+                  const SizedBox(width: 4),
+                  _Badge(
+                    text: 'GẤP',
+                    color: Colors.orange.shade100,
+                    textColor: Colors.orange,
+                  ),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
-          Text(job.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kNavy), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(job.company, style: const TextStyle(color: _kTextSec, fontSize: 12)),
+          Text(
+            job.title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: _kNavy,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            job.company,
+            style: const TextStyle(color: _kTextSec, fontSize: 12),
+          ),
           const Spacer(),
-          Row(children: [const Icon(Icons.payments_outlined, size: 14, color: _kAccent), const SizedBox(width: 4), Text(job.salary, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _kNavy))]),
+          Row(
+            children: [
+              const Icon(Icons.payments_outlined, size: 14, color: _kAccent),
+              const SizedBox(width: 4),
+              Text(
+                job.salary,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: _kNavy,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 4),
-          Row(children: [const Icon(Icons.location_on_outlined, size: 14, color: _kAccent), const SizedBox(width: 4), Text(job.location, style: const TextStyle(fontSize: 12, color: _kTextSec))]),
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined, size: 14, color: _kAccent),
+              const SizedBox(width: 4),
+              Text(
+                job.location,
+                style: const TextStyle(fontSize: 12, color: _kTextSec),
+              ),
+            ],
+          ),
           const SizedBox(height: 8),
-          SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: ['Java', 'Spring Boot', 'AWS'].map((s) => Container(margin: const EdgeInsets.only(right: 4), padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(6)), child: Text(s, style: const TextStyle(fontSize: 10, color: _kNavy)))).toList()))
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: ['Java', 'Spring Boot', 'AWS']
+                  .map(
+                    (s) => Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        s,
+                        style: const TextStyle(fontSize: 10, color: _kNavy),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
         ],
       ),
     );
@@ -345,37 +653,157 @@ class _LatestJobCard extends StatelessWidget {
     final jobProv = context.read<JobProvider>();
     final isBookmarked = auth.bookmarkedJobIds.contains(job.id);
     return Container(
-      margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)]),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
+        ],
+      ),
       child: Column(
         children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(width: 50, height: 50, decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Center(child: Text(job.company.isNotEmpty ? job.company[0] : '?', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: _kAccent)))),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(job.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _kNavy)), Text(job.company, style: const TextStyle(color: _kTextSec, fontSize: 12))])),
-            IconButton(
-              icon: Icon(isBookmarked ? Icons.bookmark : Icons.bookmark_outline, color: isBookmarked ? _kAccent : _kTextSec),
-              onPressed: () {
-                if (auth.user != null) {
-                  auth.toggleBookmark(job.id);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập để lưu công việc')));
-                }
-              },
-            ),
-            if (auth.user?.uid == job.posterId) IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20), onPressed: () => jobProv.removeJob(job.id)),
-          ]),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    job.company.isNotEmpty ? job.company[0] : '?',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: _kAccent,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: _kNavy,
+                      ),
+                    ),
+                    Text(
+                      job.company,
+                      style: const TextStyle(color: _kTextSec, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+                  color: isBookmarked ? _kAccent : _kTextSec,
+                ),
+                onPressed: () {
+                  if (auth.user != null) {
+                    auth.toggleBookmark(job.id);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Vui lòng đăng nhập để lưu công việc'),
+                      ),
+                    );
+                  }
+                },
+              ),
+              if (auth.user?.uid == job.posterId)
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
+                  onPressed: () => jobProv.removeJob(job.id),
+                ),
+            ],
+          ),
           const SizedBox(height: 12),
-          Row(children: [const Icon(Icons.payments_outlined, size: 16, color: _kAccent), const SizedBox(width: 4), Text(job.salary, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _kNavy)), const SizedBox(width: 16), const Icon(Icons.location_on_outlined, size: 16, color: _kAccent), const SizedBox(width: 4), Expanded(child: Text(job.location, style: const TextStyle(fontSize: 13, color: _kNavy), overflow: TextOverflow.ellipsis))]),
+          Row(
+            children: [
+              const Icon(Icons.payments_outlined, size: 16, color: _kAccent),
+              const SizedBox(width: 4),
+              Text(
+                job.salary,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: _kNavy,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Icon(Icons.location_on_outlined, size: 16, color: _kAccent),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  job.location,
+                  style: const TextStyle(fontSize: 13, color: _kNavy),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: const Text('MỚI ĐĂNG', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold))),
-            ElevatedButton(
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => JobDetailScreen(job: job))),
-              style: ElevatedButton.styleFrom(backgroundColor: _kAccent, foregroundColor: _kNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), elevation: 0),
-              child: const Text('Ứng tuyển nhanh', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-            ),
-          ])
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _kAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'MỚI ĐĂNG',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kAccent,
+                  foregroundColor: _kNavy,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Ứng tuyển nhanh',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -383,10 +811,30 @@ class _LatestJobCard extends StatelessWidget {
 }
 
 class _Badge extends StatelessWidget {
-  final String text; final Color color; final Color textColor;
-  const _Badge({required this.text, required this.color, required this.textColor});
+  final String text;
+  final Color color;
+  final Color textColor;
+  const _Badge({
+    required this.text,
+    required this.color,
+    required this.textColor,
+  });
   @override
   Widget build(BuildContext context) {
-    return Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)), child: Text(text, style: TextStyle(color: textColor, fontSize: 9, fontWeight: FontWeight.bold)));
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
   }
 }

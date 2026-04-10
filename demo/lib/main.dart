@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'provider/auth_provider.dart';
 import 'provider/job_provider.dart';
+import 'provider/notification_provider.dart';
 import 'screen/auth/login_screen.dart';
 import 'screen/home/home_screen.dart';
 import 'screen/recruiter/recruiter_home_screen.dart';
@@ -11,9 +12,7 @@ import 'screen/profile/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -26,6 +25,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => JobProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
         routes: {
           '/login': (_) => const LoginScreen(),
           // Quan trọng: /home bây giờ cũng trỏ về AuthWrapper để nó tự quyết định giao diện theo Role
-          '/home': (_) => const AuthWrapper(), 
+          '/home': (_) => const AuthWrapper(),
           '/profile': (_) => const ProfileScreen(),
         },
       ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../../models/job_model.dart';
 import '../../models/application_model.dart';
+import '../../models/notification_model.dart';
+import '../../provider/notification_provider.dart';
 import '../../services/application_service.dart';
 
 const Color _kPrimary = Color(0xFF43E8D8);
@@ -238,6 +241,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
     try {
       await _applicationService.createApplication(application);
       if (!mounted) return;
+      context.read<NotificationProvider>().addNotification(
+        NotificationModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: 'Có ứng viên mới ứng tuyển',
+          subtitle: '${application.applicantName} đã nộp hồ sơ cho vị trí ${application.jobTitle}.',
+          createdAt: DateTime.now(),
+        ),
+      );
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ứng tuyển thành công. Nhà tuyển dụng sẽ liên hệ bạn sớm.')));
       // Giữ lại dữ liệu đã nhập sau khi gửi
     } catch (e) {
