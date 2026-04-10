@@ -20,11 +20,11 @@ const _kTextSec = Color(0xFF8E8E93);
 class _DesktopScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
-        PointerDeviceKind.touch,
-        PointerDeviceKind.mouse,
-        PointerDeviceKind.stylus,
-        PointerDeviceKind.unknown,
-      };
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
 }
 
 class HomeScreen extends StatefulWidget {
@@ -72,7 +72,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _scrollSuggestedJobs());
+    _scrollTimer = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => _scrollSuggestedJobs(),
+    );
   }
 
   @override
@@ -148,14 +151,14 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 45,
               height: 45,
               decoration: BoxDecoration(
-                color: _kNavy,
+                color: _kAccent.withOpacity(1.0),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Center(
                 child: Text(
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
@@ -265,7 +268,8 @@ class _HomeScreenState extends State<HomeScreen> {
         SizedBox(
           height: 42,
           child: Listener(
-            onPointerSignal: (event) => _handlePointerSignal(event, _keywordScrollController),
+            onPointerSignal: (event) =>
+                _handlePointerSignal(event, _keywordScrollController),
             child: ScrollConfiguration(
               behavior: _DesktopScrollBehavior(),
               child: ListView.separated(
@@ -328,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> {
             'Xem tất cả',
             style: TextStyle(
               fontSize: 13,
-              color: _kAccent,
+              color: Colors.black,
               fontWeight: FontWeight.bold,
             ),
           ), // Đổi màu
@@ -340,11 +344,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSuggestedJobs(List<JobModel> jobs, JobProvider prov) {
     final count = jobs.length > 5 ? 5 : jobs.length;
     return SizedBox(
-      height: 230,
+      height: 250,
       child: ScrollConfiguration(
         behavior: _DesktopScrollBehavior(),
         child: Listener(
-          onPointerSignal: (event) => _handlePointerSignal(event, _suggestedScrollController),
+          onPointerSignal: (event) =>
+              _handlePointerSignal(event, _suggestedScrollController),
           child: Scrollbar(
             controller: _suggestedScrollController,
             thumbVisibility: true,
@@ -388,20 +393,25 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showFilteredJobList(BuildContext context, JobProvider prov, String keyword) {
+  void _showFilteredJobList(
+    BuildContext context,
+    JobProvider prov,
+    String keyword,
+  ) {
     final filteredJobs = prov.filterJobs(keyword);
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => FilteredJobListScreen(
-          title: keyword,
-          jobs: filteredJobs,
-        ),
+        builder: (_) =>
+            FilteredJobListScreen(title: keyword, jobs: filteredJobs),
       ),
     );
   }
 
-  void _handlePointerSignal(PointerSignalEvent event, ScrollController controller) {
+  void _handlePointerSignal(
+    PointerSignalEvent event,
+    ScrollController controller,
+  ) {
     if (event is PointerScrollEvent && controller.hasClients) {
       final newOffset = controller.offset + event.scrollDelta.dy;
       final target = newOffset.clamp(0.0, controller.position.maxScrollExtent);
@@ -431,27 +441,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(right: 10),
                       child: GestureDetector(
-                        onTap: () => setState(() => _activeFilterCategory = category),
+                        onTap: () =>
+                            setState(() => _activeFilterCategory = category),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected ? _kAccent.withOpacity(0.15) : Colors.white,
+                            color: isSelected
+                                ? _kAccent.withOpacity(0.15)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(18),
-                            border: Border.all(color: isSelected ? _kAccent : Colors.grey.shade200),
+                            border: Border.all(
+                              color: isSelected
+                                  ? _kAccent
+                                  : Colors.grey.shade200,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 category,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? _kNavy : _kTextSec,
+                                  color: Colors.black,
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.arrow_drop_down, color: _kAccent, size: 20),
+                              const Icon(
+                                Icons.arrow_drop_down,
+                                color: Colors.black,
+                                size: 20,
+                              ),
                             ],
                           ),
                         ),
@@ -472,22 +496,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 physics: const BouncingScrollPhysics(),
                 child: Row(
                   children: activeOptions.map((option) {
-                    final isSelected = _selectedFilterOption[_activeFilterCategory] == option;
+                    final isSelected =
+                        _selectedFilterOption[_activeFilterCategory] == option;
                     return Padding(
                       padding: const EdgeInsets.only(right: 10),
                       child: ActionChip(
                         label: Text(option),
                         labelStyle: TextStyle(
-                          color: _kNavy,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: Colors.black,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.w500,
                         ),
-                        backgroundColor: isSelected ? _kAccent : const Color(0xFFF1F4F8),
+                        backgroundColor: isSelected
+                            ? _kAccent
+                            : const Color(0xFFF1F4F8),
                         onPressed: () {
                           setState(() {
-                            _selectedFilterOption[_activeFilterCategory] = option;
+                            _selectedFilterOption[_activeFilterCategory] =
+                                option;
                           });
-                          prov.setSearchTerm(option == 'Ngẫu nhiên' ? '' : option);
-                          _searchController.text = option == 'Ngẫu nhiên' ? '' : option;
+                          prov.setSearchTerm(
+                            option == 'Ngẫu nhiên' ? '' : option,
+                          );
+                          _searchController.text = option == 'Ngẫu nhiên'
+                              ? ''
+                              : option;
                         },
                       ),
                     );
@@ -500,6 +534,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
   Widget _buildLatestJobs(JobProvider prov) {
     if (prov.isLoading) return const Center(child: CircularProgressIndicator());
     final jobs = prov.jobs;
@@ -661,13 +696,16 @@ class _SuggestedJobCard extends StatelessWidget {
   const _SuggestedJobCard({required this.job});
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isBookmarked = auth.bookmarkedJobIds.contains(job.id);
     return Container(
-      width: 260,
+      width: 240,
       margin: const EdgeInsets.only(right: 16, bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isBookmarked ? _kAccent : _kAccent,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.4),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -695,7 +733,7 @@ class _SuggestedJobCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: _kAccent,
+                      color: Colors.black,
                     ),
                   ),
                 ),
@@ -721,28 +759,52 @@ class _SuggestedJobCard extends StatelessWidget {
           Text(
             job.title,
             style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 15,
-              color: _kNavy,
+              fontWeight: FontWeight.w900,
+              fontSize: 17,
+              color: Colors.black,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           Text(
             job.company,
-            style: const TextStyle(color: _kTextSec, fontSize: 12),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.black87, fontSize: 13),
           ),
+          if (isBookmarked) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: _kAccent.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'ĐÃ LƯU',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: _kNavy,
+                ),
+              ),
+            ),
+          ],
           const Spacer(),
           Row(
             children: [
-              const Icon(Icons.payments_outlined, size: 14, color: _kAccent),
+              const Icon(
+                Icons.payments_outlined,
+                size: 16,
+                color: Colors.black,
+              ),
               const SizedBox(width: 4),
               Text(
                 job.salary,
                 style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: _kNavy,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
                 ),
               ),
             ],
@@ -750,38 +812,21 @@ class _SuggestedJobCard extends StatelessWidget {
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, size: 14, color: _kAccent),
+              const Icon(
+                Icons.location_on_outlined,
+                size: 16,
+                color: Colors.black,
+              ),
               const SizedBox(width: 4),
-              Text(
-                job.location,
-                style: const TextStyle(fontSize: 12, color: _kTextSec),
+              Expanded(
+                child: Text(
+                  job.location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 16, color: Colors.black),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: ['Java', 'Spring Boot', 'AWS']
-                  .map(
-                    (s) => Container(
-                      margin: const EdgeInsets.only(right: 4),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        s,
-                        style: const TextStyle(fontSize: 10, color: _kNavy),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
           ),
         ],
       ),
@@ -925,26 +970,39 @@ class _LatestJobCard extends StatelessWidget {
                   ),
                 ),
               ),
-              ElevatedButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _kAccent,
-                  foregroundColor: _kNavy,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+              Flexible(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => JobDetailScreen(job: job),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kAccent,
+                        foregroundColor: _kNavy,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Ứng tuyển nhanh',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Ứng tuyển nhanh',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
