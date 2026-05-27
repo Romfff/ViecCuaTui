@@ -1,20 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import '../../provider/auth_provider.dart';
+import 'edit_profile_screen.dart';
 
 const Color _kPrimary = Color(0xFF43E8D8);
 const Color _kPrimaryDark = Color(0xFF00B0A0);
 const Color _kNavy = Color(0xFF0D1B4B);
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  File? _profileImage;
+  final ImagePicker _imagePicker = ImagePicker();
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  Future<void> _onAvatarTap() async {
+    final XFile? pickedFile = await _imagePicker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ảnh hồ sơ đã được tải lên.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final email = auth.user?.email ?? 'Chưa xác định';
     final isRecruiter = auth.role == 'job_poster';
-    final initial = email.isNotEmpty ? email[0].toUpperCase() : '?';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FF),
@@ -39,24 +75,57 @@ class ProfileScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Avatar
-                      Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          color: _kPrimary.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: _kPrimary.withOpacity(0.5), width: 2.5),
-                        ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: _kPrimary,
+                      // Avatar - Clickable for uploading profile picture
+                      GestureDetector(
+                        onTap: _onAvatarTap,
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 76,
+                              height: 76,
+                              decoration: BoxDecoration(
+                                color: _kPrimary.withOpacity(0.15),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: _kPrimary.withOpacity(0.5), width: 2.5),
+                              ),
+                              child: _profileImage != null
+                                  ? ClipOval(
+                                      child: Image.file(
+                                        _profileImage!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    )
+                                  : Center(
+                                      child: const Text(
+                                        'D',
+                                        style: TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w900,
+                                          color: _kPrimary,
+                                        ),
+                                      ),
+                                    ),
                             ),
-                          ),
+                            // Upload icon
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: _kPrimary,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 2),
+                                ),
+                                child: const Icon(
+                                  Icons.add_a_photo_rounded,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -164,6 +233,43 @@ class ProfileScreen extends StatelessWidget {
                           iconColor: auth.user != null ? const Color(0xFF2ECC71) : Colors.grey,
                         ),
                       ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Điền thông tin hồ sơ button
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: _kPrimary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _kPrimary.withOpacity(0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.description_outlined, color: _kPrimary, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Điền thông tin hồ sơ',
+                            style: TextStyle(
+                              color: _kPrimary,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
