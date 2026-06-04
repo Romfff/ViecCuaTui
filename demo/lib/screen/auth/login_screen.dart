@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../provider/auth_provider.dart';
+import '../../services/tax_verification_service.dart';
 
 const Color _kAccent = Color(0xFF43E8D8); // Màu Xanh Ngọc mới
 const Color _kNavy = Color(0xFF0D1B4B);
@@ -22,6 +23,9 @@ class LoginScreenState extends State<LoginScreen> {
   final _taxCodeController = TextEditingController();
   String _selectedRole = 'job_seeker';
   bool _isLoginTab = true;
+  bool _isCheckingTax = false;
+  TaxVerificationResult? _taxVerificationResult;
+  String? _taxError;
 
   @override
   void dispose() {
@@ -51,7 +55,10 @@ class LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.vertical(top: Radius.circular(40)),
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 40),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 40,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -59,42 +66,79 @@ class LoginScreenState extends State<LoginScreen> {
                         Container(
                           width: 80,
                           height: 80,
-                          decoration: BoxDecoration(color: _kBg, shape: BoxShape.circle),
-                          child: const Icon(Icons.work, size: 40, color: _kNavy),
+                          decoration: BoxDecoration(
+                            color: _kBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.work,
+                            size: 40,
+                            color: _kNavy,
+                          ),
                         ),
                         const SizedBox(height: 30),
                         const Text(
                           'ỨNG DỤNG TÌM\nVIỆC',
                           textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: _kNavy, letterSpacing: 2.0),
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                            color: _kNavy,
+                            letterSpacing: 2.0,
+                          ),
                         ),
                         const SizedBox(height: 40),
                         Row(
                           children: [
-                            _buildTabItem('ĐĂNG NHẬP', _isLoginTab, () => setState(() => _isLoginTab = true)),
-                            _buildTabItem('ĐĂNG KÝ', !_isLoginTab, () => setState(() => _isLoginTab = false)),
+                            _buildTabItem(
+                              'ĐĂNG NHẬP',
+                              _isLoginTab,
+                              () => setState(() => _isLoginTab = true),
+                            ),
+                            _buildTabItem(
+                              'ĐĂNG KÝ',
+                              !_isLoginTab,
+                              () => setState(() => _isLoginTab = false),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 40),
                         _buildLabel('EMAIL CỦA BẠN'),
                         TextFormField(
                           controller: _emailController,
-                          decoration: _inputDeco(hint: '', icon: Icons.alternate_email),
-                          validator: (v) => (v == null || !v.contains('@')) ? 'Email không hợp lệ' : null,
+                          decoration: _inputDeco(
+                            hint: '',
+                            icon: Icons.alternate_email,
+                          ),
+                          validator: (v) => (v == null || !v.contains('@'))
+                              ? 'Email không hợp lệ'
+                              : null,
                         ),
                         const SizedBox(height: 25),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildLabel('MẬT KHẨU'),
-                            const Text('QUÊN MẬT KHẨU?', style: TextStyle(color: _kAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'QUÊN MẬT KHẨU?',
+                              style: TextStyle(
+                                color: _kAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                         TextFormField(
                           controller: _passwordController,
                           obscureText: true,
-                          decoration: _inputDeco(hint: '', icon: Icons.lock_outline),
-                          validator: (v) => (v == null || v.length < 6) ? 'Mật khẩu ít nhất 6 ký tự' : null,
+                          decoration: _inputDeco(
+                            hint: '',
+                            icon: Icons.lock_outline,
+                          ),
+                          validator: (v) => (v == null || v.length < 6)
+                              ? 'Mật khẩu ít nhất 6 ký tự'
+                              : null,
                         ),
                         if (!_isLoginTab) ...[
                           const SizedBox(height: 25),
@@ -102,30 +146,125 @@ class LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: true,
-                            decoration: _inputDeco(hint: '', icon: Icons.lock_clock_outlined),
-                            validator: (v) => v != _passwordController.text ? 'Mật khẩu không khớp' : null,
+                            decoration: _inputDeco(
+                              hint: '',
+                              icon: Icons.lock_clock_outlined,
+                            ),
+                            validator: (v) => v != _passwordController.text
+                                ? 'Mật khẩu không khớp'
+                                : null,
                           ),
                           if (_selectedRole == 'job_poster') ...[
                             const SizedBox(height: 25),
                             _buildLabel('MÃ SỐ THUẾ'),
-                            TextFormField(
-                              controller: _taxCodeController,
-                              keyboardType: TextInputType.number,
-                              decoration: _inputDeco(hint: '', icon: Icons.confirmation_number_outlined),
-                              validator: (v) {
-                                if (_selectedRole == 'job_poster') {
-                                  if (v == null || v.isEmpty) return 'Vui lòng nhập mã số thuế';
-                                  if (v.length < 10 || v.length > 13) return 'Mã số thuế phải từ 10 đến 13 số';
-                                  if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Mã số thuế chỉ gồm chữ số';
-                                }
-                                return null;
-                              },
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _taxCodeController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: _inputDeco(
+                                      hint: '',
+                                      icon: Icons.confirmation_number_outlined,
+                                    ),
+                                    onChanged: (_) => setState(() {
+                                      _taxVerificationResult = null;
+                                      _taxError = null;
+                                    }),
+                                    validator: (v) {
+                                      if (_selectedRole == 'job_poster') {
+                                        if (v == null || v.isEmpty) {
+                                          return 'Vui lòng nhập mã số thuế';
+                                        }
+                                        if (v.length < 10 || v.length > 13) {
+                                          return 'Mã số thuế phải từ 10 đến 13 số';
+                                        }
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(v)) {
+                                          return 'Mã số thuế chỉ gồm chữ số';
+                                        }
+                                        if (_taxVerificationResult == null) {
+                                          return 'Vui lòng check mã số thuế';
+                                        }
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                GestureDetector(
+                                  onTap: _isCheckingTax ? null : _checkTaxCode,
+                                  child: Container(
+                                    width: 58,
+                                    height: 58,
+                                    decoration: BoxDecoration(
+                                      color: _kBg,
+                                      borderRadius: BorderRadius.circular(30),
+                                      border: Border.all(
+                                        color: _taxVerificationResult != null
+                                            ? Colors.green
+                                            : Colors.transparent,
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: Center(
+                                      child: _isCheckingTax
+                                          ? const SizedBox(
+                                              width: 22,
+                                              height: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: _kAccent,
+                                              ),
+                                            )
+                                          : Icon(
+                                              _taxVerificationResult != null
+                                                  ? Icons.check_circle
+                                                  : Icons.search,
+                                              color:
+                                                  _taxVerificationResult != null
+                                                  ? Colors.green
+                                                  : _kAccent,
+                                            ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
+                            if (_taxError != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _taxError!,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                            if (_taxVerificationResult?.name != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                _taxVerificationResult!.name!,
+                                style: const TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                         const SizedBox(height: 35),
                         if (!_isLoginTab) ...[
-                          const Text('VAI TRÒ CỦA BẠN', style: TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                          const Text(
+                            'VAI TRÒ CỦA BẠN',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: _kTextSec,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
                           const SizedBox(height: 20),
                           Row(
                             children: [
@@ -134,7 +273,11 @@ class LoginScreenState extends State<LoginScreen> {
                                   icon: Icons.person_search,
                                   label: 'Ứng viên',
                                   isSelected: _selectedRole == 'job_seeker',
-                                  onTap: () => setState(() => _selectedRole = 'job_seeker'),
+                                  onTap: () => setState(() {
+                                    _selectedRole = 'job_seeker';
+                                    _taxError = null;
+                                    _taxVerificationResult = null;
+                                  }),
                                 ),
                               ),
                               const SizedBox(width: 20),
@@ -143,7 +286,11 @@ class LoginScreenState extends State<LoginScreen> {
                                   icon: Icons.business_center,
                                   label: 'Nhà tuyển dụng',
                                   isSelected: _selectedRole == 'job_poster',
-                                  onTap: () => setState(() => _selectedRole = 'job_poster'),
+                                  onTap: () => setState(() {
+                                    _selectedRole = 'job_poster';
+                                    _taxError = null;
+                                    _taxVerificationResult = null;
+                                  }),
                                 ),
                               ),
                             ],
@@ -158,18 +305,39 @@ class LoginScreenState extends State<LoginScreen> {
                             decoration: BoxDecoration(
                               color: _kAccent,
                               borderRadius: BorderRadius.circular(30),
-                              boxShadow: [BoxShadow(color: _kAccent.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 8))],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _kAccent.withOpacity(0.3),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
                             child: Center(
                               child: auth.isLoading
-                                  ? const CircularProgressIndicator(color: _kNavy)
-                                  : const Text('TIẾP TỤC HÀNH TRÌNH', style: TextStyle(color: _kNavy, fontWeight: FontWeight.bold, fontSize: 16)),
+                                  ? const CircularProgressIndicator(
+                                      color: _kNavy,
+                                    )
+                                  : const Text(
+                                      'TIẾP TỤC HÀNH TRÌNH',
+                                      style: TextStyle(
+                                        color: _kNavy,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 30),
                         if (auth.errorMessage != null)
-                          Text(auth.errorMessage!, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                          Text(
+                            auth.errorMessage!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 13,
+                            ),
+                          ),
                         const SizedBox(height: 40),
                       ],
                     ),
@@ -187,17 +355,67 @@ class LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     if (_isLoginTab) {
-      final success = await auth.login(_emailController.text.trim(), _passwordController.text.trim());
+      final success = await auth.login(
+        _emailController.text.trim(),
+        _passwordController.text.trim(),
+      );
       if (success && mounted) Navigator.pushReplacementNamed(context, '/home');
     } else {
       final success = await auth.register(
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _selectedRole,
-        taxCode: _selectedRole == 'job_poster' ? _taxCodeController.text.trim() : null,
+        taxCode: _selectedRole == 'job_poster'
+            ? _taxCodeController.text.trim()
+            : null,
       );
       if (success && mounted) Navigator.pushReplacementNamed(context, '/home');
     }
+  }
+
+  Future<void> _checkTaxCode() async {
+    final taxCode = _taxCodeController.text.trim();
+
+    if (taxCode.isEmpty) {
+      setState(() {
+        _taxError = 'Vui lòng nhập mã số thuế';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (taxCode.length < 10 || taxCode.length > 13) {
+      setState(() {
+        _taxError = 'Mã số thuế phải từ 10 đến 13 số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (!RegExp(r'^[0-9]+$').hasMatch(taxCode)) {
+      setState(() {
+        _taxError = 'Mã số thuế chỉ gồm chữ số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingTax = true;
+      _taxError = null;
+      _taxVerificationResult = null;
+    });
+
+    final result = await TaxVerificationService.verifyTaxCode(taxCode);
+    if (!mounted) return;
+
+    setState(() {
+      _isCheckingTax = false;
+      _taxVerificationResult = result;
+      _taxError = result == null
+          ? 'Không tìm thấy thông tin hoặc mã số thuế không hợp lệ'
+          : null;
+    });
   }
 
   Widget _buildTabItem(String title, bool isActive, VoidCallback onTap) {
@@ -206,9 +424,19 @@ class LoginScreenState extends State<LoginScreen> {
         onTap: onTap,
         child: Column(
           children: [
-            Text(title, style: TextStyle(color: isActive ? _kAccent : _kTextSec, fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(
+              title,
+              style: TextStyle(
+                color: isActive ? _kAccent : _kTextSec,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
             const SizedBox(height: 8),
-            Container(height: 2, color: isActive ? _kAccent : Colors.transparent),
+            Container(
+              height: 2,
+              color: isActive ? _kAccent : Colors.transparent,
+            ),
           ],
         ),
       ),
@@ -220,7 +448,14 @@ class LoginScreenState extends State<LoginScreen> {
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text, style: const TextStyle(fontSize: 10, color: _kTextSec, fontWeight: FontWeight.bold)),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 10,
+            color: _kTextSec,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -232,7 +467,10 @@ class LoginScreenState extends State<LoginScreen> {
       filled: true,
       fillColor: _kBg,
       contentPadding: const EdgeInsets.symmetric(vertical: 20),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: BorderSide.none,
+      ),
     );
   }
 }
@@ -242,7 +480,12 @@ class _RoleCard extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
-  const _RoleCard({required this.icon, required this.label, required this.isSelected, required this.onTap});
+  const _RoleCard({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -252,14 +495,24 @@ class _RoleCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected ? Colors.transparent : _kBg,
           borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: isSelected ? _kAccent : Colors.transparent, width: 2),
+          border: Border.all(
+            color: isSelected ? _kAccent : Colors.transparent,
+            width: 2,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: isSelected ? _kAccent : _kNavy, size: 30),
             const SizedBox(height: 8),
-            Text(label, style: TextStyle(color: _kNavy, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, fontSize: 13)),
+            Text(
+              label,
+              style: TextStyle(
+                color: _kNavy,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                fontSize: 13,
+              ),
+            ),
           ],
         ),
       ),

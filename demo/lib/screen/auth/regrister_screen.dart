@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../provider/auth_provider.dart';
+import '../../services/tax_verification_service.dart';
 
 const Color _kPrimary = Color(0xFF43E8D8);
 const Color _kPrimaryDark = Color(0xFF00B0A0);
@@ -22,6 +23,9 @@ class RegisterScreenState extends State<RegisterScreen> {
   String _selectedRole = 'job_seeker';
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _isCheckingTax = false;
+  TaxVerificationResult? _taxVerificationResult;
+  String? _taxError;
 
   @override
   void dispose() {
@@ -42,7 +46,11 @@ class RegisterScreenState extends State<RegisterScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: _kNavy, size: 20),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: _kNavy,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -89,52 +97,230 @@ class RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: _inputDeco(label: 'Email', icon: Icons.email_outlined),
+                        decoration: _inputDeco(
+                          label: 'Email',
+                          icon: Icons.email_outlined,
+                        ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Vui lòng nhập email';
-                          if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+").hasMatch(v)) return 'Email không hợp lệ';
+                          if (v == null || v.isEmpty)
+                            return 'Vui lòng nhập email';
+                          if (!RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+").hasMatch(v))
+                            return 'Email không hợp lệ';
                           return null;
                         },
                       ),
                       const SizedBox(height: 14),
 
                       Visibility(
-                      visible: _selectedRole == 'job_poster',
-                      replacement: SizedBox.shrink(),
-                      child: TextFormField(
-                        controller: _taxController,
-                        keyboardType: TextInputType.number,
-                        decoration: _inputDeco(
-                          label: 'Mã số thuế',
-                          icon: Icons.confirmation_number_outlined,
+                        visible: _selectedRole == 'job_poster',
+                        replacement: SizedBox.shrink(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Input với nút check mã số thuế
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _taxController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: _inputDeco(
+                                      label: 'Mã số thuế',
+                                      icon: Icons.confirmation_number_outlined,
+                                    ),
+                                    validator: (v) {
+                                      if (_selectedRole == 'job_poster') {
+                                        if (v == null || v.isEmpty)
+                                          return 'Vui lòng nhập mã số thuế';
+                                        if (v.length < 10 || v.length > 13)
+                                          return 'Mã số thuế phải từ 10 đến 13 số';
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(v))
+                                          return 'Mã số thuế chỉ gồm chữ số';
+                                        if (_taxVerificationResult == null)
+                                          return 'Vui lòng check mã số thuế';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Nút check
+                                GestureDetector(
+                                  onTap: _isCheckingTax ? null : _checkTaxCode,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF5F7FA),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
+                                    child: _isCheckingTax
+                                        ? SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation(
+                                                    _kPrimary,
+                                                  ),
+                                            ),
+                                          )
+                                        : Icon(
+                                            _taxVerificationResult != null
+                                                ? Icons.check_circle
+                                                : Icons.search,
+                                            color:
+                                                _taxVerificationResult != null
+                                                ? Colors.green
+                                                : _kPrimary,
+                                            size: 24,
+                                          ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Hiển thị lỗi nếu có
+                            if (_taxError != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.red.shade300,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: Colors.red.shade700,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _taxError!,
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            // Hiển thị thông tin doanh nghiệp nếu check thành công
+                            if (_taxVerificationResult != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.green.shade300,
+                                  ),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.verified_user,
+                                          color: Colors.green.shade700,
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Xác thực thành công',
+                                            style: TextStyle(
+                                              color: Colors.green.shade700,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    _InfoRow(
+                                      label: 'Mã số thuế:',
+                                      value:
+                                          _taxVerificationResult?.taxCode ?? '',
+                                    ),
+                                    if (_taxVerificationResult?.name != null &&
+                                        _taxVerificationResult!
+                                            .name!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      _InfoRow(
+                                        label: 'Tên doanh nghiệp:',
+                                        value:
+                                            _taxVerificationResult!.name ?? '',
+                                      ),
+                                    ],
+                                    if (_taxVerificationResult?.address !=
+                                            null &&
+                                        _taxVerificationResult!
+                                            .address!
+                                            .isNotEmpty) ...[
+                                      const SizedBox(height: 8),
+                                      _InfoRow(
+                                        label: 'Địa chỉ:',
+                                        value:
+                                            _taxVerificationResult!.address ??
+                                            '',
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 14),
+                          ],
                         ),
-                        validator: (v) {
-                          if (_selectedRole == 'job_poster') {
-                            if (v == null || v.isEmpty) return 'Vui lòng nhập mã số thuế';
-                            if (v.length < 10 || v.length > 13) return 'Mã số thuế phải từ 10 đến 13 số';
-                            if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Mã số thuế chỉ gồm chữ số';
-                          }
-                          return null;
-                        },
                       ),
-                    ),
-                    const SizedBox(height: 14),
                       // Password
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        decoration: _inputDeco(label: 'Mật khẩu', icon: Icons.lock_outline_rounded).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: Colors.grey.shade400,
-                              size: 20,
+                        decoration:
+                            _inputDeco(
+                              label: 'Mật khẩu',
+                              icon: Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.grey.shade400,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                              ),
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                          ),
-                        ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
+                          if (v == null || v.isEmpty)
+                            return 'Vui lòng nhập mật khẩu';
                           if (v.length < 6) return 'Mật khẩu ít nhất 6 ký tự';
                           return null;
                         },
@@ -145,19 +331,29 @@ class RegisterScreenState extends State<RegisterScreen> {
                       TextFormField(
                         controller: _confirmController,
                         obscureText: _obscureConfirm,
-                        decoration: _inputDeco(label: 'Xác nhận mật khẩu', icon: Icons.lock_outline_rounded).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                              color: Colors.grey.shade400,
-                              size: 20,
+                        decoration:
+                            _inputDeco(
+                              label: 'Xác nhận mật khẩu',
+                              icon: Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscureConfirm
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                  color: Colors.grey.shade400,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(
+                                  () => _obscureConfirm = !_obscureConfirm,
+                                ),
+                              ),
                             ),
-                            onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
-                          ),
-                        ),
                         validator: (v) {
-                          if (v == null || v.isEmpty) return 'Vui lòng xác nhận mật khẩu';
-                          if (v != _passwordController.text) return 'Mật khẩu không khớp';
+                          if (v == null || v.isEmpty)
+                            return 'Vui lòng xác nhận mật khẩu';
+                          if (v != _passwordController.text)
+                            return 'Mật khẩu không khớp';
                           return null;
                         },
                       ),
@@ -180,7 +376,8 @@ class RegisterScreenState extends State<RegisterScreen> {
                               title: 'Tìm việc',
                               subtitle: 'Ứng viên',
                               selected: _selectedRole == 'job_seeker',
-                              onTap: () => setState(() => _selectedRole = 'job_seeker'),
+                              onTap: () =>
+                                  setState(() => _selectedRole = 'job_seeker'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -190,7 +387,8 @@ class RegisterScreenState extends State<RegisterScreen> {
                               title: 'Đăng tuyển',
                               subtitle: 'Nhà tuyển dụng',
                               selected: _selectedRole == 'job_poster',
-                              onTap: () => setState(() => _selectedRole = 'job_poster'),
+                              onTap: () =>
+                                  setState(() => _selectedRole = 'job_poster'),
                             ),
                           ),
                         ],
@@ -203,24 +401,39 @@ class RegisterScreenState extends State<RegisterScreen> {
                         onTap: auth.isLoading
                             ? null
                             : () async {
-                                if (_formKey.currentState?.validate() ?? false) {
-                                  final messenger = ScaffoldMessenger.of(context);
+                                if (_formKey.currentState?.validate() ??
+                                    false) {
+                                  final messenger = ScaffoldMessenger.of(
+                                    context,
+                                  );
                                   final success = await auth.register(
                                     _emailController.text.trim(),
                                     _passwordController.text.trim(),
                                     _selectedRole,
-                                    taxCode: _selectedRole == 'job_poster' ? _taxController.text.trim() : null
+                                    taxCode: _selectedRole == 'job_poster'
+                                        ? _taxController.text.trim()
+                                        : null,
                                   );
                                   if (!mounted) return;
                                   if (success) {
-                                    Navigator.pushReplacementNamed(context, '/login');
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      '/login',
+                                    );
                                   } else {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(auth.errorMessage ?? 'Đăng ký thất bại. Vui lòng thử lại.'),
+                                        content: Text(
+                                          auth.errorMessage ??
+                                              'Đăng ký thất bại. Vui lòng thử lại.',
+                                        ),
                                         backgroundColor: Colors.redAccent,
                                         behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
                                         margin: const EdgeInsets.all(16),
                                       ),
                                     );
@@ -234,7 +447,10 @@ class RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           auth.errorMessage!,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.redAccent,
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ],
@@ -249,6 +465,82 @@ class RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  Future<void> _checkTaxCode() async {
+    final taxCode = _taxController.text.trim();
+
+    if (taxCode.isEmpty) {
+      setState(() {
+        _taxError = 'Vui lòng nhập mã số thuế';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (taxCode.length < 10 || taxCode.length > 13) {
+      setState(() {
+        _taxError = 'Mã số thuế phải từ 10 đến 13 số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (!RegExp(r'^[0-9]+$').hasMatch(taxCode)) {
+      setState(() {
+        _taxError = 'Mã số thuế chỉ gồm chữ số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingTax = true;
+      _taxError = null;
+      _taxVerificationResult = null;
+    });
+
+    try {
+      final result = await TaxVerificationService.verifyTaxCode(taxCode);
+
+      if (!mounted) return;
+
+      if (result != null) {
+        setState(() {
+          _taxVerificationResult = result;
+          _taxError = null;
+          _isCheckingTax = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Xác thực mã số thuế thành công: ${result.name}'),
+              backgroundColor: Colors.green,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _taxError = 'Không tìm thấy thông tin hoặc mã số thuế không hợp lệ';
+          _taxVerificationResult = null;
+          _isCheckingTax = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _taxError = 'Lỗi: ${e.toString()}';
+        _taxVerificationResult = null;
+        _isCheckingTax = false;
+      });
+    }
+  }
+
   InputDecoration _inputDeco({required String label, required IconData icon}) {
     return InputDecoration(
       labelText: label,
@@ -256,7 +548,10 @@ class RegisterScreenState extends State<RegisterScreen> {
       prefixIcon: Icon(icon, color: Colors.grey.shade400, size: 20),
       filled: true,
       fillColor: const Color(0xFFF5F7FA),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
+      ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.grey.shade200),
@@ -301,7 +596,9 @@ class _RoleCard extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
         decoration: BoxDecoration(
-          color: selected ? _kPrimary.withOpacity(0.08) : const Color(0xFFF5F7FA),
+          color: selected
+              ? _kPrimary.withOpacity(0.08)
+              : const Color(0xFFF5F7FA),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? _kPrimary : Colors.grey.shade200,
@@ -310,7 +607,11 @@ class _RoleCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(icon, color: selected ? _kPrimaryDark : Colors.grey.shade400, size: 28),
+            Icon(
+              icon,
+              color: selected ? _kPrimaryDark : Colors.grey.shade400,
+              size: 28,
+            ),
             const SizedBox(height: 8),
             Text(
               title,
@@ -340,7 +641,11 @@ class _GradientButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback? onTap;
 
-  const _GradientButton({required this.label, required this.isLoading, this.onTap});
+  const _GradientButton({
+    required this.label,
+    required this.isLoading,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -359,7 +664,13 @@ class _GradientButton extends StatelessWidget {
           color: onTap == null ? Colors.grey.shade200 : null,
           borderRadius: BorderRadius.circular(14),
           boxShadow: onTap != null
-              ? [BoxShadow(color: _kPrimary.withOpacity(0.35), blurRadius: 14, offset: const Offset(0, 5))]
+              ? [
+                  BoxShadow(
+                    color: _kPrimary.withOpacity(0.35),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
+                  ),
+                ]
               : null,
         ),
         child: Center(
@@ -367,7 +678,10 @@ class _GradientButton extends StatelessWidget {
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
                 )
               : Text(
                   label,
@@ -380,6 +694,39 @@ class _GradientButton extends StatelessWidget {
                 ),
         ),
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,0 +1,144 @@
+@startuml ViecCuaTui_UseCase
+
+' ============================
+' SƠ ĐỒ USE CASE - ỨNG DỤNG VIEC CUA TUI
+' ============================
+
+skinparam backgroundColor #F8F9FB
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #0D1B4B
+  FontColor #0D1B4B
+  FontSize 13
+}
+skinparam actor {
+  BackgroundColor #43E8D8
+  BorderColor #0D1B4B
+  FontColor #0D1B4B
+  FontSize 13
+}
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor #EEF4FF
+  BorderColor #0D1B4B
+  FontColor #0D1B4B
+  FontSize 14
+  FontStyle bold
+}
+skinparam ArrowColor #0D1B4B
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #FFC107
+}
+
+' ============================
+' ACTORS
+' ============================
+actor "Ứng Viên\n(job_seeker)" as UV
+actor "Nhà Tuyển Dụng\n(job_poster)" as NTD
+actor "Hệ Thống\nFirebase" as SYS <<system>>
+
+' ============================
+' HỆ THỐNG CHÍNH
+' ============================
+rectangle "Ứng Dụng Tìm Việc - ViecCuaTui" {
+
+  ' --- Xác thực ---
+  package "Xác Thực (Authentication)" {
+    usecase UC01 as "Đăng Nhập"
+    usecase UC02 as "Đăng Ký Ứng Viên"
+    usecase UC03 as "Đăng Ký Nhà Tuyển Dụng\n(yêu cầu Mã số thuế)"
+    usecase UC04 as "Đăng Xuất"
+  }
+
+  ' --- Ứng viên ---
+  package "Nghiệp Vụ Ứng Viên (Job Seeker)" {
+    usecase UC05 as "Xem Danh Sách\nCông Việc"
+    usecase UC06 as "Tìm Kiếm Công Việc\n(theo từ khóa)"
+    usecase UC07 as "Lọc Công Việc\n(toàn thời gian / bán thời gian)"
+    usecase UC08 as "Xem Chi Tiết\nCông Việc"
+    usecase UC09 as "Ứng Tuyển\nCông Việc"
+    usecase UC10 as "Lưu / Bỏ Lưu\nCông Việc"
+    usecase UC11 as "Xem Công Việc\nĐã Lưu"
+    usecase UC12 as "Xem Hồ Sơ\nCá Nhân"
+    usecase UC13 as "Nhận Thông Báo"
+  }
+
+  ' --- Nhà tuyển dụng ---
+  package "Nghiệp Vụ Nhà Tuyển Dụng (Recruiter)" {
+    usecase UC14 as "Đăng Tin\nTuyển Dụng"
+    usecase UC15 as "Chỉnh Sửa\nTin Tuyển Dụng"
+    usecase UC16 as "Xóa Tin\nTuyển Dụng"
+    usecase UC17 as "Quản Lý\nTin Tuyển Dụng"
+    usecase UC18 as "Xem Danh Sách\nỨng Viên"
+    usecase UC19 as "Duyệt Hồ Sơ\nỨng Viên"
+    usecase UC20 as "Xem Lịch\nPhỏng Vấn"
+    usecase UC21 as "Xem Tổng Quan\n(Dashboard)"
+    usecase UC22 as "Xem Kho\nNhân Tài"
+    usecase UC23 as "Gửi Thông Báo\ncho Ứng Viên"
+  }
+
+}
+
+' ============================
+' QUAN HỆ ACTOR - USE CASE
+' ============================
+
+' Cả hai vai trò dùng chung
+UV  --> UC01
+UV  --> UC02
+UV  --> UC04
+NTD --> UC01
+NTD --> UC03
+NTD --> UC04
+
+' Ứng viên
+UV --> UC05
+UV --> UC06
+UV --> UC07
+UV --> UC08
+UV --> UC09
+UV --> UC10
+UV --> UC11
+UV --> UC12
+UV --> UC13
+
+' Nhà tuyển dụng
+NTD --> UC14
+NTD --> UC15
+NTD --> UC16
+NTD --> UC17
+NTD --> UC18
+NTD --> UC19
+NTD --> UC20
+NTD --> UC21
+NTD --> UC22
+NTD --> UC23
+NTD --> UC12
+
+' Hệ thống
+SYS --> UC01 : xác thực tài khoản
+SYS --> UC14 : lưu dữ liệu
+SYS --> UC09 : lưu đơn ứng tuyển
+SYS --> UC13 : push notification
+
+' ============================
+' QUAN HỆ INCLUDE / EXTEND
+' ============================
+
+' include
+UC09 .> UC08 : <<include>>
+UC10 .> UC08 : <<include>>
+UC07 .> UC05 : <<include>>
+UC06 .> UC05 : <<include>>
+UC15 .> UC17 : <<include>>
+UC16 .> UC17 : <<include>>
+UC18 .> UC17 : <<include>>
+UC19 .> UC18 : <<include>>
+UC23 .> UC19 : <<include>>
+
+' extend
+UC03 .> UC02 : <<extend>>\nnhập mã số thuế
+UC13 .> UC19 : <<extend>>\nthông báo duyệt hồ sơ
+
+@enduml
