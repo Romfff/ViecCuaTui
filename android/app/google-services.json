@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "865940719595",
+    "project_id": "ltdd-380fa",
+    "storage_bucket": "ltdd-380fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:865940719595:android:00e8a179b1ed8cc8e8bbae",
+        "android_client_info": {
+          "package_name": "com.vieccuatui.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDpQQ2Ed_LLlRckHHVkJzXHrgerSPWzGpE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
