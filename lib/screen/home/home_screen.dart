@@ -5,8 +5,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/job_model.dart';
+import '../../models/interview_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
+import '../../provider/interview_provider.dart';
+import '../../services/google_meet_service.dart';
 import '../chat/chat_list_screen.dart';
 import '../notifications/notification_screen.dart';
 import '../profile/profile_screen.dart';
@@ -78,6 +81,14 @@ class _HomeScreenState extends State<HomeScreen> {
       const Duration(seconds: 2),
       (_) => _scrollSuggestedJobs(),
     );
+    // Listen to candidate interviews
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final interviewProv = context.read<InterviewProvider>();
+      if (auth.user != null) {
+        interviewProv.listenCandidateInterviews(auth.user!.uid);
+      }
+    });
   }
 
   @override
@@ -97,6 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       _buildHomeContent(auth, jobProv),
       _buildSavedJobs(auth, jobProv),
+      _buildCandidateInterviews(context),
       const ProfileScreen(),
     ];
 
@@ -579,6 +591,321 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCandidateInterviews(BuildContext context) {
+    final interviewProv = context.watch<InterviewProvider>();
+    final interviews = interviewProv.candidateInterviews;
+
+    if (interviewProv.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Lịch phỏng vấn của tôi',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: _kNavy,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              interviews.isEmpty
+                  ? 'Bạn chưa có lịch phỏng vấn nào'
+                  : 'Bạn có ${interviews.length} cuộc phỏng vấn sắp tới',
+              style: const TextStyle(color: _kTextSec),
+            ),
+            const SizedBox(height: 25),
+            if (interviews.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 50),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.event_busy_outlined,
+                        size: 80,
+                        color: _kTextSec.withOpacity(0.5),
+                      ),
+                      const SizedBox(height: 15),
+                      const Text(
+                        'Chưa có lịch phỏng vấn',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: _kTextSec,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: interviews.length,
+                itemBuilder: (context, index) {
+                  final interview = interviews[index];
+                  return _buildInterviewCard(interview, context);
+                },
+              ),
+            const SizedBox(height: 50),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInterviewCard(
+      InterviewModel interview, BuildContext context) {
+    final meetService = GoogleMeetService();
+    
+    // Định dạng thời gian
+    String formatDateTime(DateTime? dt) {
+      if (dt == null) return '';
+      return '${dt.day}/${dt.month} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        border: Border(
+          left: BorderSide(
+            color: interview.meetLink != null ? _kAccent : Colors.grey,
+            width: 4,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Time + Status
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Hiển thị thời gian thực tế nếu có, ngược lại hiển thị thời gian lên lịch
+                    if (interview.startedAt != null && interview.endedAt != null)
+                      Text(
+                        '${formatDateTime(interview.startedAt)} - ${formatDateTime(interview.endedAt)}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: _kNavy,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Chưa diễn ra',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: interview.status == 'pending'
+                            ? Colors.orange.shade50
+                            : interview.status == 'ongoing'
+                                ? Colors.green.shade50
+                                : Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        interview.status == 'pending'
+                            ? 'Sắp tới'
+                            : interview.status == 'ongoing'
+                                ? 'Đang diễn ra'
+                                : 'Hoàn thành',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: interview.status == 'pending'
+                              ? Colors.orange
+                              : interview.status == 'ongoing'
+                                  ? Colors.green
+                                  : Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              CircleAvatar(
+                backgroundColor: _kAccent.withOpacity(0.2),
+                child: Text(
+                  interview.candidateName[0].toUpperCase(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _kNavy,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Recruiter info
+          Row(
+            children: [
+              const Icon(Icons.person, size: 16, color: _kTextSec),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Phỏng vấn với',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: _kTextSec,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    interview.candidateName,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: _kNavy,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Position
+          Row(
+            children: [
+              const Icon(Icons.work_outline, size: 16, color: _kTextSec),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  interview.candidateRole,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: _kTextSec,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          // Meet Link Section
+          if (interview.meetLink != null)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: _kAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kAccent, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.video_camera_front,
+                      color: _kAccent, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Google Meet',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _kTextSec,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          interview.meetLink!.split('/').last,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _kNavy,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: _kTextSec, size: 18),
+                  SizedBox(width: 10),
+                  Text(
+                    'Link Meet sẽ được gửi sau',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _kTextSec,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // Action Buttons
+          Row(
+            children: [
+              if (interview.meetLink != null)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await meetService.launchMeetingLink(interview.meetLink!);
+                    },
+                    icon: const Icon(Icons.video_call),
+                    label: const Text('Tham gia Meet'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kAccent,
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.schedule),
+                    label: const Text('Chờ link'),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: _kTextSec),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSavedJobs(AuthProvider auth, JobProvider jobProv) {
     if (auth.user == null) {
       return const Center(
@@ -629,6 +956,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.bookmark_outline),
             activeIcon: Icon(Icons.bookmark),
             label: 'ĐÃ LƯU',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event_note_outlined),
+            activeIcon: Icon(Icons.event_note),
+            label: 'INTERVIEWS',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

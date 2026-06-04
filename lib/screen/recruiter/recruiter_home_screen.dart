@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/notification_model.dart';
+import '../../models/interview_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../../provider/notification_provider.dart';
+import '../../provider/interview_provider.dart';
 import '../chat/chat_list_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'candidate_cv_detail_screen.dart';
+import 'candidate_list_screen.dart';
 import 'post_job_screen.dart';
 import 'edit_job_screen.dart';
 import '../home/job_detail_screen.dart';
 import '../profile/profile_screen.dart';
+import '../../services/google_meet_service.dart';
 
 const _kNavy = Color(0xFF0D1B4B);
 const _kGreenAccent = Color(0xFF0FB488);
@@ -36,7 +40,7 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
       _DashboardPage(auth: auth),
       _JobsManagementPage(jobProv: jobProv, auth: auth),
       _InterviewsPage(),
-      _TalentSourcePage(),
+      const CandidateListScreen(),
       const ProfileScreen(),
     ];
 
@@ -334,7 +338,275 @@ class _JobsManagementPageState extends State<_JobsManagementPage> {
   }
 }
 
-class _InterviewsPage extends StatelessWidget {
+class _InterviewsPage extends StatefulWidget {
+  @override
+  State<_InterviewsPage> createState() => _InterviewsPageState();
+}
+
+class _InterviewsPageState extends State<_InterviewsPage> {
+  final GoogleMeetService _meetService = GoogleMeetService();
+  final Map<String, String?> _meetingLinks = {};
+  final Map<String, String?> _interviewIds = {}; // Track interview IDs by candidate name
+  final Map<String, TextEditingController> _meetLinkControllers = {};
+  late InterviewProvider _interviewProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _interviewProvider = context.read<InterviewProvider>();
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        _interviewProvider.listenRecruiterInterviews(auth.user!.uid);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _meetLinkControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _showMeetLinkDialog(
+    String candidateName,
+    String candidateRole,
+    String interviewTime,
+  ) async {
+    _meetLinkControllers[candidateName] ??= TextEditingController();
+    final linkController = _meetLinkControllers[candidateName]!;
+    linkController.clear();
+
+    DateTime? selectedStartTime;
+    DateTime? selectedEndTime;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Nhập link & thời gian Google Meet'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Link Google Meet:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: linkController,
+                      decoration: InputDecoration(
+                        hintText: 'VD: https://meet.google.com/abc-defg-hij',
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10)),
+                        prefixIcon: const Icon(Icons.video_camera_front),
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Thời gian bắt đầu:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          // ignore: use_build_context_synchronously
+                          final time = await showTimePicker(
+                            // ignore: use_build_context_synchronously
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (time != null) {
+                            setState(() {
+                              selectedStartTime = DateTime(picked.year, picked.month,
+                                  picked.day, time.hour, time.minute);
+                            });
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          selectedStartTime == null
+                              ? 'Chọn thời gian bắt đầu'
+                              : '${selectedStartTime!.day}/${selectedStartTime!.month}/${selectedStartTime!.year} - ${selectedStartTime!.hour}:${selectedStartTime!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                              color: selectedStartTime == null
+                                  ? Colors.grey
+                                  : Colors.black),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+                    const Text('Thời gian kết thúc:',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          // ignore: use_build_context_synchronously
+                          final time = await showTimePicker(
+                            // ignore: use_build_context_synchronously
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (time != null) {
+                            setState(() {
+                              selectedEndTime = DateTime(picked.year, picked.month,
+                                  picked.day, time.hour, time.minute);
+                            });
+                          }
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          selectedEndTime == null
+                              ? 'Chọn thời gian kết thúc'
+                              : '${selectedEndTime!.day}/${selectedEndTime!.month}/${selectedEndTime!.year} - ${selectedEndTime!.hour}:${selectedEndTime!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                              color: selectedEndTime == null
+                                  ? Colors.grey
+                                  : Colors.black),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Hủy'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final link = linkController.text.trim();
+                    if (_meetService.isValidMeetLink(link) &&
+                        selectedStartTime != null &&
+                        selectedEndTime != null) {
+                      final auth = context.read<AuthProvider>();
+
+                      try {
+                        final existingId = _interviewIds[candidateName];
+
+                        if (existingId != null) {
+                          await _interviewProvider.updateInterview(
+                            InterviewModel(
+                              id: existingId,
+                              recruiterId: auth.user?.uid ?? '',
+                              candidateId: '',
+                              candidateName: candidateName,
+                              candidateRole: candidateRole,
+                              interviewTime: interviewTime,
+                              meetLink: link,
+                              startedAt: selectedStartTime,
+                              endedAt: selectedEndTime,
+                              status: 'ongoing',
+                              createdAt: DateTime.now(),
+                            ),
+                          );
+                        } else {
+                          final interview = InterviewModel(
+                            id: '',
+                            recruiterId: auth.user?.uid ?? '',
+                            candidateId: '',
+                            candidateName: candidateName,
+                            candidateRole: candidateRole,
+                            interviewTime: interviewTime,
+                            meetLink: link,
+                            startedAt: selectedStartTime,
+                            endedAt: selectedEndTime,
+                            status: 'ongoing',
+                            createdAt: DateTime.now(),
+                          );
+
+                          final interviewId = await _interviewProvider
+                              .createInterview(interview);
+                          if (interviewId != null) {
+                            _interviewIds[candidateName] = interviewId;
+                          }
+                        }
+
+                        setState(() {
+                          _meetingLinks[candidateName] = link;
+                        });
+
+                        Navigator.pop(context);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('✅ Đã lưu link & thời gian'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('❌ Lỗi: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('❌ Vui lòng nhập đầy đủ thông tin'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreenAccent,
+                  ),
+                  child: const Text('Lưu',
+                      style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openGoogleMeet() async {
+    final success = await _meetService.openGoogleMeet();
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ Không thể mở Google Meet'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -368,18 +640,32 @@ class _InterviewsPage extends StatelessWidget {
             ),
             const SizedBox(height: 30),
             _InterviewCard(
-              time: '09:00 - 10:00',
+              time: _meetingLinks['Alexander Sterling'] != null ? '09:00 - 10:00' : 'Chưa diễn ra',
               name: 'Alexander Sterling',
               role: 'Senior Product Architect',
-              status: 'ĐANG DIỄN RA',
+              status: _meetingLinks['Alexander Sterling'] != null ? 'ĐANG DIỄN RA' : 'SẮP TỚI',
               isOnline: true,
+              onOpenMeet: _openGoogleMeet,
+              onPasteMeetLink: () => _showMeetLinkDialog(
+                'Alexander Sterling',
+                'Senior Product Architect',
+                '09:00 - 10:00',
+              ),
+              meetLink: _meetingLinks['Alexander Sterling'],
             ),
             _InterviewCard(
-              time: '13:30 - 14:30',
+              time: _meetingLinks['Minh Anh Nguyễn'] != null ? '13:30 - 14:30' : 'Chưa diễn ra',
               name: 'Minh Anh Nguyễn',
               role: 'Lead DevOps Engineer',
-              status: 'SẮP TỚI',
+              status: _meetingLinks['Minh Anh Nguyễn'] != null ? 'ĐANG DIỄN RA' : 'SẮP TỚI',
               isOnline: false,
+              onOpenMeet: _openGoogleMeet,
+              onPasteMeetLink: () => _showMeetLinkDialog(
+                'Minh Anh Nguyễn',
+                'Lead DevOps Engineer',
+                '13:30 - 14:30',
+              ),
+              meetLink: _meetingLinks['Minh Anh Nguyễn'],
             ),
           ],
         ),
@@ -746,12 +1032,18 @@ class _JobManageCard extends StatelessWidget {
 class _InterviewCard extends StatelessWidget {
   final String time, name, role, status;
   final bool isOnline;
+  final VoidCallback? onOpenMeet;
+  final VoidCallback? onPasteMeetLink;
+  final String? meetLink;
   const _InterviewCard({
     required this.time,
     required this.name,
     required this.role,
     required this.status,
     required this.isOnline,
+    this.onOpenMeet,
+    this.onPasteMeetLink,
+    this.meetLink,
   });
 
   @override
@@ -857,25 +1149,50 @@ class _InterviewCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 15),
+          if (meetLink != null)
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Meet: ${meetLink!.split('/').last}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () {},
+                child: ElevatedButton.icon(
+                  onPressed: onOpenMeet,
+                  icon: const Icon(Icons.video_camera_front),
+                  label: const Text('Mở Meet'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _kGreenAccent,
-                  ),
-                  child: const Text(
-                    'Tham gia',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  child: const Text('Xem hồ sơ'),
+                child: OutlinedButton.icon(
+                  onPressed: onPasteMeetLink,
+                  icon: const Icon(Icons.paste),
+                  label: Text(meetLink != null ? 'Sửa' : 'Dán link'),
                 ),
               ),
             ],

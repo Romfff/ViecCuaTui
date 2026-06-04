@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../provider/auth_provider.dart';
+import '../../services/tax_verification_service.dart';
 
 const Color _kAccent = Color(0xFF43E8D8); // Màu Xanh Ngọc mới
 const Color _kNavy = Color(0xFF0D1B4B);
@@ -22,6 +23,10 @@ class LoginScreenState extends State<LoginScreen> {
   final _taxCodeController = TextEditingController();
   String _selectedRole = 'job_seeker';
   bool _isLoginTab = true;
+  bool _isCheckingTax = false;
+  String? _taxError;
+  TaxVerificationResult? _taxVerificationResult;
+  DateTime? _lastTaxCheckTime; // Throttle check
 
   @override
   void dispose() {
@@ -108,19 +113,156 @@ class LoginScreenState extends State<LoginScreen> {
                           if (_selectedRole == 'job_poster') ...[
                             const SizedBox(height: 25),
                             _buildLabel('MÃ SỐ THUẾ'),
-                            TextFormField(
-                              controller: _taxCodeController,
-                              keyboardType: TextInputType.number,
-                              decoration: _inputDeco(hint: '', icon: Icons.confirmation_number_outlined),
-                              validator: (v) {
-                                if (_selectedRole == 'job_poster') {
-                                  if (v == null || v.isEmpty) return 'Vui lòng nhập mã số thuế';
-                                  if (v.length < 10 || v.length > 13) return 'Mã số thuế phải từ 10 đến 13 số';
-                                  if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Mã số thuế chỉ gồm chữ số';
-                                }
-                                return null;
-                              },
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _taxCodeController,
+                                    keyboardType: TextInputType.number,
+                                    decoration: _inputDeco(
+                                      hint: '',
+                                      icon: Icons.confirmation_number_outlined,
+                                    ),
+                                    validator: (v) {
+                                      if (_selectedRole == 'job_poster') {
+                                        if (v == null || v.isEmpty) return 'Vui lòng nhập mã số thuế';
+                                        if (v.length < 10 || v.length > 13) return 'Mã số thuế phải từ 10 đến 13 số';
+                                        if (!RegExp(r'^[0-9]+$').hasMatch(v)) return 'Mã số thuế chỉ gồm chữ số';
+                                      }
+                                      return null;
+                                    },
+                                    onChanged: (_) => setState(() {
+                                      _taxVerificationResult = null;
+                                      _taxError = null;
+                                    }),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                GestureDetector(
+                                  onTap: _isCheckingTax ? null : _checkTaxCode,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: _kBg,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade200),
+                                    ),
+                                    child: _isCheckingTax
+                                        ? SizedBox(
+                                            width: 24,
+                                            height: 24,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation(_kAccent),
+                                            ),
+                                          )
+                                        : Icon(
+                                            _taxVerificationResult != null
+                                                ? Icons.check_circle
+                                                : Icons.search,
+                                            color: _taxVerificationResult != null
+                                                ? Colors.green
+                                                : _kAccent,
+                                            size: 24,
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
+                            if (_taxError != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red.shade300),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _taxError!,
+                                        style: TextStyle(
+                                          color: Colors.red.shade700,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            if (_taxVerificationResult != null) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.green.shade300),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(Icons.verified_user, color: Colors.green.shade700, size: 20),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'Xác thực thành công',
+                                            style: TextStyle(
+                                              color: Colors.green.shade700,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    if (_taxVerificationResult!.name != null &&
+                                        _taxVerificationResult!.name!.isNotEmpty) ...[
+                                      Text(
+                                        'Tên công ty: ${_taxVerificationResult!.name}',
+                                        style: TextStyle(
+                                          color: Colors.green.shade900,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                    ],
+                                    if (_taxVerificationResult!.taxCode != null) ...[
+                                      Text(
+                                        'Mã số thuế: ${_taxVerificationResult!.taxCode}',
+                                        style: TextStyle(
+                                          color: Colors.green.shade900,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                    ],
+                                    if (_taxVerificationResult!.address != null &&
+                                        _taxVerificationResult!.address!.isNotEmpty) ...[
+                                      Text(
+                                        'Địa chỉ: ${_taxVerificationResult!.address}',
+                                        style: TextStyle(
+                                          color: Colors.green.shade900,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ],
                         const SizedBox(height: 35),
@@ -197,6 +339,72 @@ class LoginScreenState extends State<LoginScreen> {
         taxCode: _selectedRole == 'job_poster' ? _taxCodeController.text.trim() : null,
       );
       if (success && mounted) Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  Future<void> _checkTaxCode() async {
+    final taxCode = _taxCodeController.text.trim();
+
+    if (taxCode.isEmpty) {
+      setState(() {
+        _taxError = 'Vui lòng nhập mã số thuế';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (taxCode.length < 10 || taxCode.length > 13) {
+      setState(() {
+        _taxError = 'Mã số thuế phải từ 10 đến 13 số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    if (!RegExp(r'^[0-9]+$').hasMatch(taxCode)) {
+      setState(() {
+        _taxError = 'Mã số thuế chỉ gồm chữ số';
+        _taxVerificationResult = null;
+      });
+      return;
+    }
+
+    // Throttle: chỉ cho phép check 1 lần mỗi 2 giây
+    final now = DateTime.now();
+    if (_lastTaxCheckTime != null &&
+        now.difference(_lastTaxCheckTime!).inSeconds < 2) {
+      setState(() {
+        _taxError = 'Vui lòng chờ 2 giây trước khi check lại';
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingTax = true;
+      _taxError = null;
+      _taxVerificationResult = null;
+      _lastTaxCheckTime = DateTime.now();
+    });
+
+    try {
+      final result = await TaxVerificationService.verifyTaxCode(taxCode);
+      if (!mounted) return;
+
+      setState(() {
+        _isCheckingTax = false;
+        _taxVerificationResult = result;
+        _taxError = result == null
+            ? 'Không tìm thấy thông tin hoặc mã số thuế không hợp lệ'
+            : null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _taxError = 'Lỗi: ${e.toString()}';
+        _taxVerificationResult = null;
+        _isCheckingTax = false;
+      });
     }
   }
 

@@ -1,11 +1,18 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 import '../../models/notification_model.dart';
+import '../../models/interview_model.dart';
 import '../../provider/notification_provider.dart';
+import '../../provider/interview_provider.dart';
+import '../../provider/auth_provider.dart';
+import '../../widgets/custom_button.dart';
+import 'interview_schedule_screen.dart';
 
 const _kNavy = Color(0xFF0D1B4B);
 const _kGreenAccent = Color(0xFF0FB488);
@@ -18,6 +25,7 @@ class CandidateCvDetailScreen extends StatefulWidget {
   final String? cvBody;
   final String? cvFileName;
   final Uint8List? cvBytes;
+  final bool fromCandidateList;
 
   const CandidateCvDetailScreen({
     super.key,
@@ -26,6 +34,7 @@ class CandidateCvDetailScreen extends StatefulWidget {
     this.cvBody,
     this.cvFileName,
     this.cvBytes,
+    this.fromCandidateList = false,
   });
 
   @override
@@ -34,6 +43,10 @@ class CandidateCvDetailScreen extends StatefulWidget {
 
 class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
   String? _selectedDecision;
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime; // Thay thế _interviewTimeController
+  String? _selectedInterviewType; // 'office' or 'meet'
+  final TextEditingController _officeAddressController = TextEditingController();
 
   String get _decisionKey => widget.cvFileName?.trim().isNotEmpty == true
       ? widget.cvFileName!
@@ -43,6 +56,12 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
   void initState() {
     super.initState();
     _selectedDecision = context.read<NotificationProvider>().getCvDecision(_decisionKey);
+  }
+
+  @override
+  void dispose() {
+    _officeAddressController.dispose();
+    super.dispose();
   }
 
   @override
@@ -253,6 +272,14 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                             content: Text('Đã gửi thông báo chấp nhận CV cho ứng viên.'),
                           ),
                         );
+                        // Nếu từ CandidateListScreen, quay lại; nếu không, hiển thị form phỏng vấn
+                        if (widget.fromCandidateList) {
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (mounted) {
+                              Navigator.pop(context);
+                            }
+                          });
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kGreenAccent,
@@ -290,49 +317,375 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                           ),
                         );
                       },
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        foregroundColor: Colors.red,
-                      ),
-                      child: const Text('Từ chối'),
+                      borderColor: Colors.red,
+                      textColor: Colors.red,
+                      icon: Icons.close,
                     ),
                   ),
                 ],
               ),
-            ] else if (_selectedDecision == 'accepted') ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreenAccent,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+            ] else if (_selectedDecision == 'accepted') ..[
+              // Interview scheduling section
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Sắp xếp cuộc phỏng vấn',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _kNavy,
+                      ),
                     ),
-                  ),
-                  child: const Text('Đã chấp nhận'),
+                    const SizedBox(height: 16),
+                    // Calendar
+                    const Text(
+                      'Chọn ngày phỏng vấn',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kNavy,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TableCalendar(
+                        firstDay: DateTime.now(),
+                        lastDay: DateTime.now().add(const Duration(days: 90)),
+                        focusedDay: _selectedDate ?? DateTime.now(),
+                        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+                        onDaySelected: (selectedDay, focusedDay) {
+                          setState(() {
+                            _selectedDate = selectedDay;
+                          });
+                        },
+                        calendarStyle: CalendarStyle(
+                          selectedDecoration: BoxDecoration(
+                            color: _kGreenAccent,
+                            shape: BoxShape.circle,
+                          ),
+                          todayDecoration: BoxDecoration(
+                            color: _kGreenAccent.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        headerStyle: const HeaderStyle(
+                          formatButtonVisible: false,
+                          titleCentered: true,
+                        ),
+                      ),
+                    ),
+                    if (_selectedDate != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Ngày chọn: ${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: _kGreenAccent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    // Interview time
+                    const Text(
+                      'Giờ phỏng vấn',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kNavy,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: () {
+                        showCupertinoModalPopup(
+                          context: context,
+                          builder: (BuildContext context) => Container(
+                            height: 280,
+                            padding: const EdgeInsets.only(top: 6),
+                            margin: EdgeInsets.only(
+                              bottom: MediaQuery.of(context).viewInsets.bottom,
+                            ),
+                            color: CupertinoColors.systemBackground.resolveFrom(context),
+                            child: SafeArea(
+                              top: false,
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      CupertinoButton(
+                                        child: const Text('Huỷ', style: TextStyle(color: _kGreenAccent)),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                      const Text('Chọn Giờ',
+                                          style: TextStyle(fontWeight: FontWeight.w600)),
+                                      CupertinoButton(
+                                        child: const Text('Xong', style: TextStyle(color: _kGreenAccent)),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: CupertinoDatePicker(
+                                      mode: CupertinoDatePickerMode.time,
+                                      use24hFormat: true,
+                                      initialDateTime: _selectedTime != null
+                                          ? DateTime(2024, 1, 1, _selectedTime!.hour, _selectedTime!.minute)
+                                          : DateTime.now(),
+                                      onDateTimeChanged: (DateTime newDateTime) {
+                                        setState(() {
+                                          _selectedTime = TimeOfDay(
+                                            hour: newDateTime.hour,
+                                            minute: newDateTime.minute,
+                                          );
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _selectedTime != null
+                                  ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+                                  : 'Chọn giờ phỏng vấn',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _selectedTime != null ? _kNavy : _kTextSub,
+                                fontWeight: _selectedTime != null ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                            ),
+                            Icon(Icons.access_time, color: _kGreenAccent, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Interview type selection
+                    const Text(
+                      'Hình thức phỏng vấn',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _kNavy,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedInterviewType = 'meet';
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: _selectedInterviewType == 'meet' ? _kGreenAccent : Colors.grey.shade300,
+                                  width: _selectedInterviewType == 'meet' ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                color: _selectedInterviewType == 'meet' ? _kGreenAccent.withOpacity(0.1) : Colors.transparent,
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.video_call,
+                                    color: _selectedInterviewType == 'meet' ? _kGreenAccent : _kTextSub,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Google Meet',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedInterviewType = 'office';
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: _selectedInterviewType == 'office' ? _kGreenAccent : Colors.grey.shade300,
+                                  width: _selectedInterviewType == 'office' ? 2 : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                color: _selectedInterviewType == 'office' ? _kGreenAccent.withOpacity(0.1) : Colors.transparent,
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: _selectedInterviewType == 'office' ? _kGreenAccent : _kTextSub,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Tại Văn Phòng',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Office address field
+                    if (_selectedInterviewType == 'office') ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Địa chỉ văn phòng',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _kNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _officeAddressController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Nhập địa chỉ văn phòng',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    // Submit button
+                    Builder(
+                      builder: (context) {
+                        final isFormValid = _selectedDate != null && 
+                                           _selectedTime != null &&
+                                           _selectedInterviewType != null &&
+                                           (_selectedInterviewType == 'meet' || _officeAddressController.text.isNotEmpty);
+                        
+                        return CustomButton(
+                          label: 'Xác Nhận Phỏng Vấn',
+                          isEnabled: isFormValid,
+                          onPressed: () async {
+                            try {
+                              final authProvider = context.read<AuthProvider>();
+                              final interviewProvider = context.read<InterviewProvider>();
+                              
+                              if (authProvider.user == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Lỗi: Không tìm thấy người dùng')),
+                                );
+                                return;
+                              }
+                              
+                              final timeString = '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
+                              final interview = InterviewModel(
+                                id: '', // Will be set by Firestore
+                                recruiterId: authProvider.user!.uid,
+                                candidateId: widget.name,
+                                candidateName: widget.name,
+                                candidateRole: widget.role,
+                                interviewTime: '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year} - $timeString',
+                                status: 'pending',
+                                createdAt: DateTime.now(),
+                                interviewType: _selectedInterviewType!,
+                                officeAddress: _selectedInterviewType == 'office' ? _officeAddressController.text : null,
+                              );
+
+                              final id = await interviewProvider.createInterview(interview);
+                              if (id != null && id.isNotEmpty && mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Đã tạo cuộc phỏng vấn thành công!'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+                                // Navigate to InterviewScheduleScreen
+                                Future.delayed(const Duration(milliseconds: 500), () {
+                                  if (mounted) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) => const InterviewScheduleScreen(),
+                                      ),
+                                    );
+                                  }
+                                });
+                              } else if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lỗi khi tạo cuộc phỏng vấn: ID = $id'),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              print('Error creating interview: $e');
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Lỗi: ${e.toString()}'),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          enabledColor: _kGreenAccent,
+                          icon: Icons.check,
+                        );
+                      }
+                    ),
+                  ],
                 ),
               ),
             ] else ...[
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: null,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    foregroundColor: Colors.red,
-                  ),
-                  child: const Text('Đã từ chối'),
-                ),
+              CustomOutlinedButton(
+                label: 'Đã từ chối',
+                onPressed: null,
+                isEnabled: false,
+                borderColor: Colors.red,
+                textColor: Colors.red,
+                icon: Icons.close,
               ),
             ],
           ],

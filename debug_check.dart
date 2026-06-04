@@ -17,14 +17,10 @@ void main() {
   print('  _isCheckingTax = $isCheckingTax');
   print('  _taxVerificationResult = $taxVerificationResult');
 
-  if (isCheckingTax) {
-    print('  → Hiển thị: CircularProgressIndicator ✅');
+  if (taxVerificationResult != null) {
+    print('  → Hiển thị: Icons.check_circle (xanh) ✅');
   } else {
-    if (taxVerificationResult != null) {
-      print('  → Hiển thị: Icons.check_circle (xanh) ✅');
-    } else {
-      print('  → Hiển thị: Icons.search (cyan) ✅');
-    }
+    print('  → Hiển thị: Icons.search (cyan) ✅');
   }
 
   print('');

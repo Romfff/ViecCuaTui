@@ -36,7 +36,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   Future<void> _pickCV() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg'],
       withData: true,

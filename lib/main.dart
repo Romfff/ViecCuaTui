@@ -6,6 +6,8 @@ import 'provider/auth_provider.dart';
 import 'provider/chat_provider.dart';
 import 'provider/job_provider.dart';
 import 'provider/notification_provider.dart';
+import 'provider/interview_provider.dart';
+import 'provider/application_provider.dart';
 import 'screen/auth/login_screen.dart';
 import 'screen/home/home_screen.dart';
 import 'screen/recruiter/recruiter_home_screen.dart';
@@ -28,6 +30,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => JobProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => InterviewProvider()),
+        ChangeNotifierProvider(create: (_) => ApplicationProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
