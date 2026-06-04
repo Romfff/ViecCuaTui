@@ -13,6 +13,7 @@ class CustomButton extends StatelessWidget {
   final bool isLoading;
   final FontWeight? fontWeight;
   final double? fontSize;
+  final bool isFullWidth;
 
   const CustomButton({
     super.key,
@@ -28,6 +29,7 @@ class CustomButton extends StatelessWidget {
     this.isLoading = false,
     this.fontWeight,
     this.fontSize,
+    this.isFullWidth = true,
   });
 
   @override
@@ -43,40 +45,39 @@ class CustomButton extends StatelessWidget {
         ? (textColor ?? Colors.white) 
         : kTextSub;
 
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: isEnabled && !isLoading ? onPressed : null,
-        icon: isLoading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(textButtonColor),
-                ),
-              )
-            : Icon(icon ?? Icons.check, size: 18),
-        label: Text(
-          label,
-          style: TextStyle(
-            color: textButtonColor,
-            fontWeight: fontWeight ?? FontWeight.w600,
-            fontSize: fontSize ?? 14,
-          ),
+    final button = ElevatedButton.icon(
+      onPressed: isEnabled && !isLoading ? onPressed : null,
+      icon: isLoading
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(textButtonColor),
+              ),
+            )
+          : Icon(icon ?? Icons.check, size: 18),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: textButtonColor,
+          fontWeight: fontWeight ?? FontWeight.w600,
+          fontSize: fontSize ?? 14,
         ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: buttonColor,
-          disabledBackgroundColor: disabledColor ?? Colors.grey.shade300,
-          foregroundColor: textButtonColor,
-          disabledForegroundColor: kTextSub,
-          padding: EdgeInsets.symmetric(vertical: padding ?? 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius ?? 16),
-          ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: buttonColor,
+        disabledBackgroundColor: disabledColor ?? Colors.grey.shade300,
+        foregroundColor: textButtonColor,
+        disabledForegroundColor: kTextSub,
+        padding: EdgeInsets.symmetric(vertical: padding ?? 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius ?? 16),
         ),
       ),
     );
+
+    return isFullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
@@ -92,6 +93,7 @@ class CustomOutlinedButton extends StatelessWidget {
   final bool isLoading;
   final FontWeight? fontWeight;
   final double? fontSize;
+  final bool isFullWidth;
 
   const CustomOutlinedButton({
     super.key,
@@ -106,6 +108,7 @@ class CustomOutlinedButton extends StatelessWidget {
     this.isLoading = false,
     this.fontWeight,
     this.fontSize,
+    this.isFullWidth = true,
   });
 
   @override
@@ -121,37 +124,36 @@ class CustomOutlinedButton extends StatelessWidget {
         ? (borderColor ?? kGreenAccent)
         : Colors.grey.shade300;
 
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: isEnabled && !isLoading ? onPressed : null,
-        icon: isLoading
-            ? SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-              )
-            : Icon(icon ?? Icons.close, size: 18),
-        label: Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontWeight: fontWeight ?? FontWeight.w600,
-            fontSize: fontSize ?? 14,
-          ),
+    final button = OutlinedButton.icon(
+      onPressed: isEnabled && !isLoading ? onPressed : null,
+      icon: isLoading
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            )
+          : Icon(icon ?? Icons.close, size: 18),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: fontWeight ?? FontWeight.w600,
+          fontSize: fontSize ?? 14,
         ),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: color,
-          side: BorderSide(color: border, width: 1.5),
-          padding: EdgeInsets.symmetric(vertical: padding ?? 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius ?? 16),
-          ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: border, width: 1.5),
+        padding: EdgeInsets.symmetric(vertical: padding ?? 14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(borderRadius ?? 16),
         ),
       ),
     );
+
+    return isFullWidth ? SizedBox(width: double.infinity, child: button) : button;
   }
 }

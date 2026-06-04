@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/interview_model.dart';
 import '../../provider/interview_provider.dart';
 import '../../provider/auth_provider.dart';
+import '../../widgets/custom_button.dart';
 
 const _kNavy = Color(0xFF0D1B4B);
 const _kGreenAccent = Color(0xFF0FB488);
@@ -11,7 +12,12 @@ const _kBg = Color(0xFFF8F9FB);
 const _kTextSub = Color(0xFF8E8E93);
 
 class InterviewScheduleScreen extends StatefulWidget {
-  const InterviewScheduleScreen({super.key});
+  final DateTime? initialDate;
+
+  const InterviewScheduleScreen({
+    super.key,
+    this.initialDate,
+  });
 
   @override
   State<InterviewScheduleScreen> createState() => _InterviewScheduleScreenState();
@@ -23,7 +29,7 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    _focusedDate = DateTime.now();
+    _focusedDate = widget.initialDate ?? DateTime.now();
     // Listen to recruiter interviews with actual recruiter ID
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
@@ -92,69 +98,48 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // Week navigation
+                // Week navigation and day selector
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.chevron_left, color: _kNavy),
-                            onPressed: () {
-                              setState(() {
-                                _focusedDate = _focusedDate.subtract(const Duration(days: 7));
-                              });
-                            },
-                          ),
-                          Text(
-                            '${DateFormat('d MMM', 'vi_VN').format(weekStart)} - ${DateFormat('d MMM', 'vi_VN').format(weekDays.last)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: _kNavy,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.chevron_right, color: _kNavy),
-                            onPressed: () {
-                              setState(() {
-                                _focusedDate = _focusedDate.add(const Duration(days: 7));
-                              });
-                            },
-                          ),
-                        ],
+                      // Title subtitle
+                      Text(
+                        'Bạn có ${interviews.where((i) {
+                          try {
+                            final parts = i.interviewTime.split(' - ');
+                            final dateParts = parts[0].split('/');
+                            final day = int.parse(dateParts[0]);
+                            final month = int.parse(dateParts[1]);
+                            final year = int.parse(dateParts[2]);
+                            final interviewDate = DateTime(year, month, day);
+                            return interviewDate.day == _focusedDate.day &&
+                                interviewDate.month == _focusedDate.month &&
+                                interviewDate.year == _focusedDate.year;
+                          } catch (e) {
+                            return false;
+                          }
+                        }).length} cuộc phỏng vấn hôm nay',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: _kTextSub,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      // Day picker with interview count indicator
+                      const SizedBox(height: 16),
+                      // Day picker - simplified
                       SizedBox(
-                        height: 70,
+                        height: 80,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: 7,
                           itemBuilder: (context, index) {
                             final day = weekDays[index];
-                            final isToday = day.day == DateTime.now().day &&
-                                day.month == DateTime.now().month &&
-                                day.year == DateTime.now().year;
-                            
-                            // Count interviews for this day
-                            final dayInterviewCount = interviews.where((interview) {
-                              try {
-                                final parts = interview.interviewTime.split(' - ');
-                                final dateParts = parts[0].split('/');
-                                final d = int.parse(dateParts[0]);
-                                final m = int.parse(dateParts[1]);
-                                final y = int.parse(dateParts[2]);
-                                
-                                return d == day.day && m == day.month && y == day.year;
-                              } catch (e) {
-                                return false;
-                              }
-                            }).length;
+                            final isSelected = _focusedDate.day == day.day &&
+                                _focusedDate.month == day.month &&
+                                _focusedDate.year == day.year;
                             
                             return GestureDetector(
                               onTap: () {
@@ -163,56 +148,32 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                                 });
                               },
                               child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                margin: const EdgeInsets.only(right: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 decoration: BoxDecoration(
-                                  color: isToday ? _kGreenAccent : Colors.grey.shade100,
+                                  color: isSelected ? _kNavy : Colors.grey.shade100,
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: _focusedDate.day == day.day && _focusedDate.month == day.month && _focusedDate.year == day.year 
-                                        ? _kGreenAccent 
-                                        : Colors.transparent,
-                                    width: 2,
-                                  ),
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                      DateFormat('EEE', 'vi_VN').format(day).toUpperCase(),
+                                      'TH ${day.weekday}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.w600,
-                                        color: isToday ? Colors.white : _kTextSub,
+                                        color: isSelected ? Colors.white : _kTextSub,
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 6),
                                     Text(
                                       day.day.toString(),
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: isToday ? Colors.white : _kNavy,
+                                        color: isSelected ? Colors.white : _kNavy,
                                       ),
                                     ),
-                                    if (dayInterviewCount > 0) ...[
-                                      const SizedBox(height: 2),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.red,
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          dayInterviewCount.toString(),
-                                          style: const TextStyle(
-                                            fontSize: 10,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
                                   ],
                                 ),
                               ),
@@ -223,7 +184,7 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 // Interviews list for selected day
                 if (filteredInterviews.isEmpty)
                   Padding(
@@ -233,7 +194,7 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                         Icon(Icons.calendar_today, color: _kTextSub, size: 64),
                         const SizedBox(height: 16),
                         const Text(
-                          'Chưa có cuộc phỏng vấn hôm nay',
+                          'Chưa có cuộc phỏng vấn',
                           style: TextStyle(
                             color: _kNavy,
                             fontSize: 16,
@@ -257,23 +218,13 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Phỏng vấn ngày ${_focusedDate.day}/${_focusedDate.month} (${filteredInterviews.length} cuộc)',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: _kGreenAccent,
-                            ),
-                          ),
-                        ),
                         ...filteredInterviews
                             .map((interview) => _buildInterviewCard(context, interview))
                             .toList(),
                       ],
                     ),
                   ),
+                const SizedBox(height: 24),
               ],
             ),
           );
@@ -414,38 +365,28 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
+                  child: CustomButton(
+                    label: 'Mở Meet',
+                    icon: Icons.video_call,
                     onPressed: () {
                       // TODO: Open Google Meet
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Đang mở Google Meet...')),
                       );
                     },
-                    icon: const Icon(Icons.video_call, size: 18),
-                    label: const Text('Mở Meet', style: TextStyle(fontSize: 12)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kGreenAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+                    enabledColor: _kGreenAccent,
+                    isFullWidth: false,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: CustomOutlinedButton(
+                    label: 'Dán link',
+                    icon: Icons.link,
                     onPressed: () => _showPasteMeetLinkDialog(context, interview),
-                    icon: const Icon(Icons.link, size: 18),
-                    label: const Text('Dán link', style: TextStyle(fontSize: 12)),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _kGreenAccent,
-                      side: const BorderSide(color: _kGreenAccent),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+                    borderColor: _kGreenAccent,
+                    textColor: _kGreenAccent,
+                    isFullWidth: false,
                   ),
                 ),
               ],

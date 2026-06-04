@@ -107,7 +107,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red, size: 64),
+                        const Icon(Icons.error_outline, color: Colors.red, size: 64),
                         const SizedBox(height: 16),
                         const Text(
                           'Lỗi khi tải dữ liệu',
@@ -115,6 +115,18 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                             color: _kNavy,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Text(
+                            appProvider.errorMessage,
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 12,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],

@@ -13,6 +13,7 @@ import '../../provider/interview_provider.dart';
 import '../../provider/auth_provider.dart';
 import '../../widgets/custom_button.dart';
 import 'interview_schedule_screen.dart';
+import 'recruiter_home_screen.dart';
 
 const _kNavy = Color(0xFF0D1B4B);
 const _kGreenAccent = Color(0xFF0FB488);
@@ -62,6 +63,18 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
   void dispose() {
     _officeAddressController.dispose();
     super.dispose();
+  }
+
+  // Generate time slots from 8:00 to 18:00 with 30-minute intervals
+  List<TimeOfDay> _generateTimeSlots() {
+    List<TimeOfDay> slots = [];
+    for (int hour = 8; hour <= 18; hour++) {
+      slots.add(TimeOfDay(hour: hour, minute: 0));
+      if (hour < 18) {
+        slots.add(TimeOfDay(hour: hour, minute: 30));
+      }
+    }
+    return slots;
   }
 
   @override
@@ -293,7 +306,8 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton(
+                    child: CustomOutlinedButton(
+                      label: 'Từ Chối',
                       onPressed: () {
                         setState(() {
                           _selectedDecision = 'rejected';
@@ -324,7 +338,7 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                   ),
                 ],
               ),
-            ] else if (_selectedDecision == 'accepted') ..[
+            ] else if (_selectedDecision == 'accepted') ...[
               // Interview scheduling section
               Container(
                 padding: const EdgeInsets.all(16),
@@ -400,7 +414,7 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    // Interview time
+                    // Interview time - Dropdown Picker
                     const Text(
                       'Giờ phỏng vấn',
                       style: TextStyle(
@@ -410,82 +424,63 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        showCupertinoModalPopup(
-                          context: context,
-                          builder: (BuildContext context) => Container(
-                            height: 280,
-                            padding: const EdgeInsets.only(top: 6),
-                            margin: EdgeInsets.only(
-                              bottom: MediaQuery.of(context).viewInsets.bottom,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                      ),
+                      child: DropdownButton<TimeOfDay>(
+                        value: _selectedTime,
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                        hint: Row(
+                          children: [
+                            Icon(Icons.access_time, color: _kGreenAccent, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Chọn giờ phỏng vấn',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: _kTextSub,
+                              ),
                             ),
-                            color: CupertinoColors.systemBackground.resolveFrom(context),
-                            child: SafeArea(
-                              top: false,
-                              child: Column(
+                          ],
+                        ),
+                        icon: const Icon(Icons.expand_more, color: _kGreenAccent),
+                        onChanged: (TimeOfDay? newTime) {
+                          if (newTime != null) {
+                            setState(() {
+                              _selectedTime = newTime;
+                            });
+                          }
+                        },
+                        items: _generateTimeSlots().map((TimeOfDay time) {
+                          final isSelected = _selectedTime == time;
+                          return DropdownMenuItem<TimeOfDay>(
+                            value: time,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      CupertinoButton(
-                                        child: const Text('Huỷ', style: TextStyle(color: _kGreenAccent)),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                      const Text('Chọn Giờ',
-                                          style: TextStyle(fontWeight: FontWeight.w600)),
-                                      CupertinoButton(
-                                        child: const Text('Xong', style: TextStyle(color: _kGreenAccent)),
-                                        onPressed: () => Navigator.pop(context),
-                                      ),
-                                    ],
-                                  ),
-                                  Expanded(
-                                    child: CupertinoDatePicker(
-                                      mode: CupertinoDatePickerMode.time,
-                                      use24hFormat: true,
-                                      initialDateTime: _selectedTime != null
-                                          ? DateTime(2024, 1, 1, _selectedTime!.hour, _selectedTime!.minute)
-                                          : DateTime.now(),
-                                      onDateTimeChanged: (DateTime newDateTime) {
-                                        setState(() {
-                                          _selectedTime = TimeOfDay(
-                                            hour: newDateTime.hour,
-                                            minute: newDateTime.minute,
-                                          );
-                                        });
-                                      },
+                                  Text(
+                                    '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isSelected ? _kGreenAccent : _kNavy,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                     ),
                                   ),
+                                  if (isSelected) ...[
+                                    const SizedBox(width: 8),
+                                    const Icon(Icons.check, color: _kGreenAccent, size: 18),
+                                  ]
                                 ],
                               ),
                             ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.white,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _selectedTime != null
-                                  ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
-                                  : 'Chọn giờ phỏng vấn',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: _selectedTime != null ? _kNavy : _kTextSub,
-                                fontWeight: _selectedTime != null ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                            ),
-                            Icon(Icons.access_time, color: _kGreenAccent, size: 20),
-                          ],
-                        ),
+                          );
+                        }).toList(),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -640,13 +635,17 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                                     duration: Duration(seconds: 1),
                                   ),
                                 );
-                                // Navigate to InterviewScheduleScreen
+                                // Navigate to RecruiterHomeScreen with the scheduled date and Interviews tab (index 2)
                                 Future.delayed(const Duration(milliseconds: 500), () {
                                   if (mounted) {
-                                    Navigator.of(context).pushReplacement(
+                                    Navigator.of(context).pushAndRemoveUntil(
                                       MaterialPageRoute(
-                                        builder: (context) => const InterviewScheduleScreen(),
+                                        builder: (context) => RecruiterHomeScreen(
+                                          initialIndex: 2,
+                                          initialDate: _selectedDate,
+                                        ),
                                       ),
+                                      (route) => false,
                                     );
                                   }
                                 });

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:uuid/uuid.dart';
 import '../models/interview_model.dart';
-import '../services/interview_service.dart';
+import '../services/local_db_service.dart';
 
 class InterviewProvider extends ChangeNotifier {
-  final InterviewService _interviewService = InterviewService();
+  final LocalDbService _localDbService = LocalDbService.instance;
 
   bool isLoading = true;
   bool hasError = false;
@@ -23,135 +23,161 @@ class InterviewProvider extends ChangeNotifier {
   // Get candidate's interviews
   List<InterviewModel> get candidateInterviews => _candidateInterviews;
 
-  // Listen to recruiter interviews
+  // Listen to recruiter interviews (Load from SQLite)
   void listenRecruiterInterviews(String recruiterId) {
-    _interviewService
-        .getRecruiterInterviewsStream(recruiterId)
-        .listen((interviews) {
+    isLoading = true;
+    notifyListeners();
+    
+    _localDbService.getRecruiterInterviews(recruiterId).then((interviews) {
       _recruiterInterviews = interviews;
+      print('✓ Loaded ${interviews.length} recruiter interviews from SQLite');
+      
       isLoading = false;
       hasError = false;
       notifyListeners();
-    }, onError: (_) {
+    }).catchError((e) {
+      print('❌ Error loading recruiter interviews from SQLite: $e');
       isLoading = false;
       hasError = true;
       notifyListeners();
     });
   }
 
-  // Listen to candidate interviews
+  // Listen to candidate interviews (Load from SQLite)
   void listenCandidateInterviews(String candidateId) {
-    _interviewService
-        .getCandidateInterviewsStream(candidateId)
-        .listen((interviews) {
+    isLoading = true;
+    notifyListeners();
+    
+    _localDbService.getCandidateInterviews(candidateId).then((interviews) {
       _candidateInterviews = interviews;
+      print('✓ Loaded ${interviews.length} candidate interviews from SQLite');
+      
       isLoading = false;
       hasError = false;
       notifyListeners();
-    }, onError: (_) {
+    }).catchError((e) {
+      print('❌ Error loading candidate interviews from SQLite: $e');
       isLoading = false;
       hasError = true;
       notifyListeners();
     });
   }
 
-  // Create new interview
+  // Create new interview (Save to SQLite only)
   Future<String?> createInterview(InterviewModel interview) async {
     try {
-      print('InterviewProvider.createInterview: Starting...');
-      print('Creating interview: ${interview.toMap()}');
-      final id = await _interviewService.createInterview(interview);
-      print('InterviewProvider.createInterview: Success with ID: $id');
+      print('=== InterviewProvider.createInterview START (SQLite only) ===');
       
-      // Validate ID is not empty
-      if (id.isEmpty) {
-        print('Warning: Interview ID is empty!');
-        return null;
-      }
+      // Generate unique ID locally
+      const uuid = Uuid();
+      final id = uuid.v4();
       
+      // Create interview with generated ID
+      final interviewWithId = interview.copyWith(
+        id: id,
+        createdAt: DateTime.now(),
+      );
+      
+      // Save to SQLite only
+      await _localDbService.saveInterview(interviewWithId);
+      print('✓ Interview saved to SQLite with ID: $id');
+      
+      // Add to local recruiter interviews list
+      _recruiterInterviews.add(interviewWithId);
+      notifyListeners();
+      
+      print('✓ Interview created successfully with ID: $id');
       return id;
-    } on FirebaseException catch (e) {
-      print('Lỗi Firebase tạo interview: ${e.code} - ${e.message}');
-      return null;
     } catch (e) {
-      print('Lỗi tạo interview: $e');
+      print('❌ Error creating interview: $e');
       print('Stack trace: ${StackTrace.current}');
-      return null;
+      rethrow;
     }
   }
 
-  // Update meet link
+  // Update meet link (SQLite only)
   Future<bool> updateMeetLink(String interviewId, String meetLink) async {
     try {
-      await _interviewService.updateMeetLink(interviewId, meetLink);
-      
       // Update local state
       final index = _recruiterInterviews.indexWhere((i) => i.id == interviewId);
       if (index != -1) {
-        _recruiterInterviews[index] = _recruiterInterviews[index].copyWith(
+        final updated = _recruiterInterviews[index].copyWith(
           meetLink: meetLink,
         );
+        _recruiterInterviews[index] = updated;
+        
+        // Update SQLite
+        await _localDbService.updateInterview(updated);
+        print('✓ Interview meet link updated in SQLite: $interviewId');
+        
         notifyListeners();
       }
       
       return true;
     } catch (e) {
-      print('Lỗi cập nhật meet link: $e');
+      print('❌ Lỗi cập nhật meet link: $e');
       return false;
     }
   }
 
-  // Update interview (link, times, etc)
+  // Update interview (SQLite only)
   Future<bool> updateInterview(InterviewModel interview) async {
     try {
-      await _interviewService.updateInterview(interview);
-      
       // Update local state
       final index = _recruiterInterviews.indexWhere((i) => i.id == interview.id);
       if (index != -1) {
         _recruiterInterviews[index] = interview;
+        
+        // Update SQLite
+        await _localDbService.updateInterview(interview);
+        print('✓ Interview updated in SQLite: ${interview.id}');
+        
         notifyListeners();
       }
       
       return true;
     } catch (e) {
-      print('Lỗi cập nhật interview: $e');
+      print('❌ Lỗi cập nhật interview: $e');
       return false;
     }
   }
 
-  // Update interview status
-  Future<bool> updateInterviewStatus(
-      String interviewId, String status) async {
+  // Update interview status (SQLite only)
+  Future<bool> updateInterviewStatus(String interviewId, String status) async {
     try {
-      await _interviewService.updateInterviewStatus(interviewId, status);
-
       // Update local state
       final index = _recruiterInterviews.indexWhere((i) => i.id == interviewId);
       if (index != -1) {
-        _recruiterInterviews[index] =
-            _recruiterInterviews[index].copyWith(status: status);
+        final updated = _recruiterInterviews[index].copyWith(status: status);
+        _recruiterInterviews[index] = updated;
+        
+        // Update SQLite
+        await _localDbService.updateInterview(updated);
+        print('✓ Interview status updated in SQLite: $interviewId');
+        
         notifyListeners();
       }
 
       return true;
     } catch (e) {
-      print('Lỗi cập nhật status: $e');
+      print('❌ Lỗi cập nhật status: $e');
       return false;
     }
   }
 
-  // Delete interview
+  // Delete interview (SQLite only)
   Future<bool> deleteInterview(String interviewId) async {
     try {
-      await _interviewService.deleteInterview(interviewId);
-
       _recruiterInterviews.removeWhere((i) => i.id == interviewId);
+      
+      // Delete from SQLite
+      await _localDbService.deleteInterview(interviewId);
+      print('✓ Interview deleted from SQLite: $interviewId');
       notifyListeners();
-
+      
       return true;
     } catch (e) {
-      print('Lỗi xóa interview: $e');
+      print('❌ Lỗi xóa interview: $e');
       return false;
     }
   }

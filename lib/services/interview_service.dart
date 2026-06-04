@@ -69,16 +69,23 @@ class InterviewService {
       });
       
       final id = docRef.id;
-      print('Interview Service: Document added with ID: $id');
+      print('Interview Service: Document added with ID: $id (length: ${id.length})');
       
+      // Validate ID is not empty
       if (id.isEmpty) {
-        throw Exception('Firestore returned empty document ID');
+        print('ERROR: Interview ID is null or empty!');
+        throw Exception('Firestore returned null or empty document ID');
       }
       
+      print('Interview Service: Successfully created interview with ID: $id');
       return id;
+    } on FirebaseException catch (e) {
+      print('Interview Service Firebase Error: ${e.code} - ${e.message}');
+      print('Stack trace: ${StackTrace.current}');
+      rethrow;
     } catch (e) {
       print('Interview Service Error: $e');
-      print('Stack trace: $e');
+      print('Stack trace: ${StackTrace.current}');
       rethrow;
     }
   }

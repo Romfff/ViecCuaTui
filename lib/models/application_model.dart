@@ -13,6 +13,7 @@ class ApplicationModel {
   final String education;
   final String skills;
   final String coverLetter;
+  final DateTime? appliedAt;
 
   ApplicationModel({
     this.id,
@@ -29,9 +30,25 @@ class ApplicationModel {
     required this.education,
     required this.skills,
     required this.coverLetter,
+    this.appliedAt,
   });
 
   factory ApplicationModel.fromMap(String id, Map<String, dynamic> data) {
+    DateTime? parsedDate;
+    if (data['appliedAt'] != null) {
+      if (data['appliedAt'] is DateTime) {
+        parsedDate = data['appliedAt'];
+      } else if (data['appliedAt'] is String) {
+        parsedDate = DateTime.tryParse(data['appliedAt']);
+      } else {
+        // If it's a Firestore Timestamp or similar
+        try {
+          parsedDate = (data['appliedAt'] as dynamic).toDate();
+        } catch (_) {
+          // fallback
+        }
+      }
+    }
     return ApplicationModel(
       id: id,
       jobId: data['jobId'] ?? '',
@@ -47,6 +64,7 @@ class ApplicationModel {
       education: data['education'] ?? '',
       skills: data['skills'] ?? '',
       coverLetter: data['coverLetter'] ?? '',
+      appliedAt: parsedDate,
     );
   }
 
@@ -65,6 +83,7 @@ class ApplicationModel {
       'education': education,
       'skills': skills,
       'coverLetter': coverLetter,
+      'appliedAt': appliedAt,
     };
   }
 }

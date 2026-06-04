@@ -6,10 +6,11 @@ import '../services/application_service.dart';
 class ApplicationProvider extends ChangeNotifier {
   final ApplicationService _applicationService = ApplicationService();
   
-  late StreamSubscription _applicationSubscription;
+  StreamSubscription? _applicationSubscription;
 
   bool isLoading = true;
   bool hasError = false;
+  String errorMessage = '';
   List<ApplicationModel> _applications = [];
 
   List<ApplicationModel> get applications => _applications;
@@ -20,18 +21,21 @@ class ApplicationProvider extends ChangeNotifier {
   }
 
   void fetchApplications() {
+    _applicationSubscription?.cancel();
     _applicationSubscription = _applicationService.getApplicationsStream().listen(
       (applications) {
         print('ApplicationProvider: Fetched ${applications.length} applications');
         _applications = applications;
         isLoading = false;
         hasError = false;
+        errorMessage = '';
         notifyListeners();
       },
       onError: (error) {
         print('ApplicationProvider: Error fetching applications: $error');
         isLoading = false;
         hasError = true;
+        errorMessage = error.toString();
         notifyListeners();
       },
     );
@@ -40,6 +44,7 @@ class ApplicationProvider extends ChangeNotifier {
   // Fetch applications for specific job IDs (for recruiter)
   void fetchApplicationsByJobIds(List<String> jobIds) {
     print('ApplicationProvider: fetchApplicationsByJobIds with ${jobIds.length} jobs');
+    _applicationSubscription?.cancel();
     _applicationSubscription = _applicationService.getApplicationsByJobIdsStream(jobIds).listen(
       (applications) {
         print('ApplicationProvider: Fetched ${applications.length} applications for recruiter');
@@ -59,7 +64,7 @@ class ApplicationProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _applicationSubscription.cancel();
+    _applicationSubscription?.cancel();
     super.dispose();
   }
 

@@ -1,7 +1,10 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'services/local_db_service.dart';
 import 'provider/auth_provider.dart';
 import 'provider/chat_provider.dart';
 import 'provider/job_provider.dart';
@@ -15,6 +18,14 @@ import 'screen/profile/profile_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  await LocalDbService.instance.init();
+  
+  // Initialize date formatting for intl package
+  await initializeDateFormatting('vi_VN', null);
+  
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }

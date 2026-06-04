@@ -6,6 +6,7 @@ import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../../provider/notification_provider.dart';
 import '../../provider/interview_provider.dart';
+import '../../provider/application_provider.dart';
 import '../chat/chat_list_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'candidate_cv_detail_screen.dart';
@@ -22,14 +23,34 @@ const _kBg = Color(0xFFF8F9FB);
 const _kTextSub = Color(0xFF8E8E93);
 
 class RecruiterHomeScreen extends StatefulWidget {
-  const RecruiterHomeScreen({super.key});
+  final int initialIndex;
+  final DateTime? initialDate;
+
+  const RecruiterHomeScreen({
+    super.key,
+    this.initialIndex = 0,
+    this.initialDate,
+  });
 
   @override
   State<RecruiterHomeScreen> createState() => _RecruiterHomeScreenState();
 }
 
 class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      if (auth.user != null) {
+        context.read<InterviewProvider>().listenRecruiterInterviews(auth.user!.uid);
+        context.read<ApplicationProvider>().fetchApplications();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,9 +58,16 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
     final jobProv = context.watch<JobProvider>();
 
     final List<Widget> pages = [
-      _DashboardPage(auth: auth),
+      _DashboardPage(
+        auth: auth,
+        onTabSelect: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+      ),
       _JobsManagementPage(jobProv: jobProv, auth: auth),
-      _InterviewsPage(),
+      _InterviewsPage(initialDate: widget.initialDate),
       const CandidateListScreen(),
       const ProfileScreen(),
     ];
@@ -100,11 +128,43 @@ class _RecruiterHomeScreenState extends State<RecruiterHomeScreen> {
 
 class _DashboardPage extends StatelessWidget {
   final AuthProvider auth;
-  const _DashboardPage({required this.auth});
+  final ValueChanged<int>? onTabSelect;
+  const _DashboardPage({required this.auth, this.onTabSelect});
 
   @override
   Widget build(BuildContext context) {
     final name = auth.user?.email?.split('@').first ?? 'Recruiter';
+    
+    // Watch real database-backed providers
+    final jobProv = context.watch<JobProvider>();
+    final appProv = context.watch<ApplicationProvider>();
+    final interviewProv = context.watch<InterviewProvider>();
+    final notifProv = context.watch<NotificationProvider>();
+
+    // 1. Calculate Posted Jobs Statistics (TIN TUYỂN DỤNG)
+    final recruiterJobs = jobProv.jobs.where((job) => job.posterId == auth.user?.uid).toList();
+    final activeJobsCount = recruiterJobs.where((job) => job.status == 'published').length;
+
+    // 2. Calculate Received CVs/Applications Statistics (HỒ SƠ MỚI)
+    final recruiterJobIds = recruiterJobs.map((job) => job.id).toSet();
+    final recruiterApps = appProv.applications.where((app) => recruiterJobIds.contains(app.jobId)).toList();
+    final pendingApps = recruiterApps.where((app) => notifProv.getCvDecision(app.applicantName) == null).toList();
+
+    // 3. Calculate Completed Interviews Statistics (ĐÃ PHỎNG VẤN)
+    final completedInterviewsCount = interviewProv.recruiterInterviews.where((i) => i.status == 'completed').length;
+
+    // 4. Calculate Upcoming/Pending Interviews Statistics (CHỜ PHỎNG VẤN)
+    final pendingInterviewsCount = interviewProv.recruiterInterviews.where((i) => i.status == 'pending' || i.status == 'ongoing').length;
+
+    // Filter latest candidates to show only those who applied today
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
+    final todayApps = recruiterApps.where((app) {
+      if (app.appliedAt == null) return false;
+      return app.appliedAt!.isAfter(todayStart);
+    }).toList();
+    final latestApps = todayApps.reversed.toList();
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -157,42 +217,48 @@ class _DashboardPage extends StatelessWidget {
                 color: _kNavy,
               ),
             ),
-            const Text(
-              'Hôm nay có 204 hồ sơ mới đang chờ bạn.',
-              style: TextStyle(color: _kTextSub, fontSize: 14),
+            Text(
+              pendingApps.isEmpty
+                  ? 'Hiện tại không có hồ sơ mới nào đang chờ bạn.'
+                  : 'Hôm nay có ${pendingApps.length} hồ sơ mới đang chờ bạn.',
+              style: const TextStyle(color: _kTextSub, fontSize: 14),
             ),
             const SizedBox(height: 30),
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisCount: 2,
-              mainAxisSpacing: 15,
-              crossAxisSpacing: 15,
-              childAspectRatio: 1.4,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 1.75,
               children: [
                 _StatCard(
                   title: 'TIN TUYỂN DỤNG',
-                  value: '24',
-                  sub: '↗ tăng 12%',
+                  value: recruiterJobs.length.toString(),
+                  sub: '$activeJobsCount đang hoạt động',
                   color: Colors.blue,
+                  onTap: () => onTabSelect?.call(1),
                 ),
                 _StatCard(
                   title: 'HỒ SƠ MỚI',
-                  value: '856',
-                  sub: '204 hôm nay',
+                  value: recruiterApps.length.toString(),
+                  sub: '${pendingApps.length} chờ duyệt',
                   color: Colors.orange,
+                  onTap: () => onTabSelect?.call(3),
                 ),
                 _StatCard(
                   title: 'ĐÃ PHỎNG VẤN',
-                  value: '18',
-                  sub: 'Tháng này',
+                  value: completedInterviewsCount.toString(),
+                  sub: 'Đã hoàn thành',
                   color: Colors.green,
+                  onTap: () => onTabSelect?.call(2),
                 ),
                 _StatCard(
                   title: 'CHỜ PHỎNG VẤN',
-                  value: '42',
-                  sub: '! Cần xử lý',
+                  value: pendingInterviewsCount.toString(),
+                  sub: 'Lịch sắp tới',
                   color: Colors.red,
+                  onTap: () => onTabSelect?.call(2),
                 ),
               ],
             ),
@@ -206,18 +272,26 @@ class _DashboardPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 15),
-            _CandidateItem(
-              name: 'Alexandra Chen',
-              role: 'Senior UI Designer',
-              match: '98%',
-              cvBody: 'Kính gửi Nhà tuyển dụng,\n\nTôi là Alexandra Chen, chuyên viên thiết kế giao diện người dùng với hơn 6 năm kinh nghiệm trong lĩnh vực FinTech và Mobile App. Tôi đã hoàn thành nhiều dự án thiết kế từ nghiên cứu người dùng đến prototypes và hệ thống thiết kế toàn diện. Tôi tự tin mang đến trải nghiệm trực quan, hiện đại và thân thiện cho sản phẩm của công ty.',
-            ),
-            _CandidateItem(
-              name: 'Julian Blackwood',
-              role: 'Product Manager',
-              match: '85%',
-              cvBody: 'Xin chào,\n\nTôi là Julian Blackwood, Product Manager với hơn 8 năm điều phối sản phẩm từ chiến lược đến triển khai. Tôi đã dẫn dắt các nhóm đa chức năng và phát triển các roadmap gắn liền với mục tiêu kinh doanh. Tôi mong muốn tham gia đội ngũ của quý công ty để thúc đẩy sản phẩm đạt tăng trưởng bền vững.',
-            ),
+            if (latestApps.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 30),
+                  child: Text(
+                    'Chưa có ứng viên nào nộp hồ sơ hôm nay.',
+                    style: TextStyle(color: _kTextSub),
+                  ),
+                ),
+              )
+            else
+              ...latestApps.map((app) {
+                final matchPercent = '${80 + (app.applicantName.length * 3) % 20}%';
+                return _CandidateItem(
+                  name: app.applicantName,
+                  role: app.position,
+                  match: matchPercent,
+                  cvBody: app.coverLetter.isNotEmpty ? app.coverLetter : 'Hồ sơ ứng tuyển cho vị trí ${app.position}.',
+                );
+              }).toList(),
           ],
         ),
       ),
@@ -339,20 +413,23 @@ class _JobsManagementPageState extends State<_JobsManagementPage> {
 }
 
 class _InterviewsPage extends StatefulWidget {
+  final DateTime? initialDate;
+  const _InterviewsPage({this.initialDate});
+
   @override
   State<_InterviewsPage> createState() => _InterviewsPageState();
 }
 
 class _InterviewsPageState extends State<_InterviewsPage> {
   final GoogleMeetService _meetService = GoogleMeetService();
-  final Map<String, String?> _meetingLinks = {};
-  final Map<String, String?> _interviewIds = {}; // Track interview IDs by candidate name
   final Map<String, TextEditingController> _meetLinkControllers = {};
   late InterviewProvider _interviewProvider;
+  late DateTime _focusedDate;
 
   @override
   void initState() {
     super.initState();
+    _focusedDate = widget.initialDate ?? DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _interviewProvider = context.read<InterviewProvider>();
       final auth = context.read<AuthProvider>();
@@ -363,6 +440,14 @@ class _InterviewsPageState extends State<_InterviewsPage> {
   }
 
   @override
+  void didUpdateWidget(covariant _InterviewsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialDate != oldWidget.initialDate && widget.initialDate != null) {
+      _focusedDate = widget.initialDate!;
+    }
+  }
+
+  @override
   void dispose() {
     for (var controller in _meetLinkControllers.values) {
       controller.dispose();
@@ -370,17 +455,43 @@ class _InterviewsPageState extends State<_InterviewsPage> {
     super.dispose();
   }
 
-  Future<void> _showMeetLinkDialog(
-    String candidateName,
-    String candidateRole,
-    String interviewTime,
-  ) async {
-    _meetLinkControllers[candidateName] ??= TextEditingController();
-    final linkController = _meetLinkControllers[candidateName]!;
-    linkController.clear();
+  DateTime getMonday(DateTime date) {
+    int difference = date.weekday - 1;
+    return date.subtract(Duration(days: difference));
+  }
 
-    DateTime? selectedStartTime;
-    DateTime? selectedEndTime;
+  List<DateTime> getWeekDays(DateTime mondayDate) {
+    return List.generate(7, (index) => mondayDate.add(Duration(days: index)));
+  }
+
+  String _getWeekdayName(int weekday) {
+    switch (weekday) {
+      case 1:
+        return 'TH 2';
+      case 2:
+        return 'TH 3';
+      case 3:
+        return 'TH 4';
+      case 4:
+        return 'TH 5';
+      case 5:
+        return 'TH 6';
+      case 6:
+        return 'TH 7';
+      case 7:
+        return 'CN';
+      default:
+        return '';
+    }
+  }
+
+  Future<void> _showMeetLinkDialog(InterviewModel interview) async {
+    _meetLinkControllers[interview.candidateName] ??= TextEditingController();
+    final linkController = _meetLinkControllers[interview.candidateName]!;
+    linkController.text = interview.meetLink ?? '';
+
+    DateTime? selectedStartTime = interview.startedAt;
+    DateTime? selectedEndTime = interview.endedAt;
 
     await showDialog(
       context: context,
@@ -509,53 +620,17 @@ class _InterviewsPageState extends State<_InterviewsPage> {
                     if (_meetService.isValidMeetLink(link) &&
                         selectedStartTime != null &&
                         selectedEndTime != null) {
-                      final auth = context.read<AuthProvider>();
-
                       try {
-                        final existingId = _interviewIds[candidateName];
-
-                        if (existingId != null) {
-                          await _interviewProvider.updateInterview(
-                            InterviewModel(
-                              id: existingId,
-                              recruiterId: auth.user?.uid ?? '',
-                              candidateId: '',
-                              candidateName: candidateName,
-                              candidateRole: candidateRole,
-                              interviewTime: interviewTime,
-                              meetLink: link,
-                              startedAt: selectedStartTime,
-                              endedAt: selectedEndTime,
-                              status: 'ongoing',
-                              createdAt: DateTime.now(),
-                            ),
-                          );
-                        } else {
-                          final interview = InterviewModel(
-                            id: '',
-                            recruiterId: auth.user?.uid ?? '',
-                            candidateId: '',
-                            candidateName: candidateName,
-                            candidateRole: candidateRole,
-                            interviewTime: interviewTime,
+                        await _interviewProvider.updateInterview(
+                          interview.copyWith(
                             meetLink: link,
                             startedAt: selectedStartTime,
                             endedAt: selectedEndTime,
                             status: 'ongoing',
-                            createdAt: DateTime.now(),
-                          );
+                          ),
+                        );
 
-                          final interviewId = await _interviewProvider
-                              .createInterview(interview);
-                          if (interviewId != null) {
-                            _interviewIds[candidateName] = interviewId;
-                          }
-                        }
-
-                        setState(() {
-                          _meetingLinks[candidateName] = link;
-                        });
-
+                        if (!mounted) return;
                         Navigator.pop(context);
 
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -565,6 +640,7 @@ class _InterviewsPageState extends State<_InterviewsPage> {
                           ),
                         );
                       } catch (e) {
+                        if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('❌ Lỗi: $e'),
@@ -609,66 +685,124 @@ class _InterviewsPageState extends State<_InterviewsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    int daysCount = 8;
+    if (widget.initialDate != null) {
+      final initialDateClean = DateTime(widget.initialDate!.year, widget.initialDate!.month, widget.initialDate!.day);
+      final diff = initialDateClean.difference(todayDate).inDays;
+      if (diff > 7) {
+        daysCount = diff + 1;
+      }
+    }
+    final scrollableDays = List.generate(daysCount, (index) => todayDate.add(Duration(days: index)));
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Lịch phỏng vấn',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-                color: _kNavy,
-              ),
-            ),
-            const Text(
-              'Bạn có 3 cuộc phỏng vấn hôm nay',
-              style: TextStyle(color: _kTextSub),
-            ),
-            const SizedBox(height: 25),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Consumer<InterviewProvider>(
+        builder: (context, interviewProvider, _) {
+          final interviews = interviewProvider.recruiterInterviews;
+          
+          // Filter interviews for the selected day
+          final filteredInterviews = interviews.where((interview) {
+            try {
+              final parts = interview.interviewTime.split(' - ');
+              final dateParts = parts[0].split('/');
+              final day = int.parse(dateParts[0]);
+              final month = int.parse(dateParts[1]);
+              final year = int.parse(dateParts[2]);
+              
+              final interviewDate = DateTime(year, month, day);
+              return interviewDate.day == _focusedDate.day &&
+                  interviewDate.month == _focusedDate.month &&
+                  interviewDate.year == _focusedDate.year;
+            } catch (e) {
+              return false;
+            }
+          }).toList();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _DateNode(day: 'TH 2', date: '12'),
-                _DateNode(day: 'TH 3', date: '13'),
-                _DateNode(day: 'TH 4', date: '14', isSelected: true),
-                _DateNode(day: 'TH 5', date: '15'),
-                _DateNode(day: 'TH 6', date: '16'),
+                const Text(
+                  'Lịch phỏng vấn',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: _kNavy,
+                  ),
+                ),
+                Text(
+                  filteredInterviews.isEmpty
+                      ? 'Bạn chưa có lịch phỏng vấn nào hôm nay'
+                      : 'Bạn có ${filteredInterviews.length} cuộc phỏng vấn hôm nay',
+                  style: const TextStyle(color: _kTextSub),
+                ),
+                const SizedBox(height: 25),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  child: Row(
+                    children: scrollableDays.map((day) {
+                      final isSelected = _focusedDate.day == day.day &&
+                          _focusedDate.month == day.month &&
+                          _focusedDate.year == day.year;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _focusedDate = day;
+                            });
+                          },
+                          child: _DateNode(
+                            day: _getWeekdayName(day.weekday),
+                            date: day.day.toString(),
+                            isSelected: isSelected,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 30),
+                if (filteredInterviews.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.calendar_today, color: _kTextSub, size: 48),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Chưa có cuộc phỏng vấn nào',
+                            style: TextStyle(
+                              color: _kNavy,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...filteredInterviews.map((interview) {
+                    return _InterviewCard(
+                      time: interview.interviewTime.split(' - ').last,
+                      name: interview.candidateName,
+                      role: interview.candidateRole,
+                      status: interview.status == 'pending' ? 'SẮP TỚI' : 'ĐANG DIỄN RA',
+                      isOnline: interview.interviewType == 'meet',
+                      meetLink: interview.meetLink,
+                      onOpenMeet: _openGoogleMeet,
+                      onPasteMeetLink: () => _showMeetLinkDialog(interview),
+                    );
+                  }).toList(),
               ],
             ),
-            const SizedBox(height: 30),
-            _InterviewCard(
-              time: _meetingLinks['Alexander Sterling'] != null ? '09:00 - 10:00' : 'Chưa diễn ra',
-              name: 'Alexander Sterling',
-              role: 'Senior Product Architect',
-              status: _meetingLinks['Alexander Sterling'] != null ? 'ĐANG DIỄN RA' : 'SẮP TỚI',
-              isOnline: true,
-              onOpenMeet: _openGoogleMeet,
-              onPasteMeetLink: () => _showMeetLinkDialog(
-                'Alexander Sterling',
-                'Senior Product Architect',
-                '09:00 - 10:00',
-              ),
-              meetLink: _meetingLinks['Alexander Sterling'],
-            ),
-            _InterviewCard(
-              time: _meetingLinks['Minh Anh Nguyễn'] != null ? '13:30 - 14:30' : 'Chưa diễn ra',
-              name: 'Minh Anh Nguyễn',
-              role: 'Lead DevOps Engineer',
-              status: _meetingLinks['Minh Anh Nguyễn'] != null ? 'ĐANG DIỄN RA' : 'SẮP TỚI',
-              isOnline: false,
-              onOpenMeet: _openGoogleMeet,
-              onPasteMeetLink: () => _showMeetLinkDialog(
-                'Minh Anh Nguyễn',
-                'Lead DevOps Engineer',
-                '13:30 - 14:30',
-              ),
-              meetLink: _meetingLinks['Minh Anh Nguyễn'],
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -726,17 +860,18 @@ class _TalentSourcePage extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String title, value, sub;
   final Color color;
+  final VoidCallback? onTap;
   const _StatCard({
     required this.title,
     required this.value,
     required this.sub,
     required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -744,35 +879,49 @@ class _StatCard extends StatelessWidget {
           BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: _kTextSub,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: _kTextSub,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: _kNavy,
+                  ),
+                ),
+                Text(
+                  sub,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: _kNavy,
-            ),
-          ),
-          Text(
-            sub,
-            style: TextStyle(
-              fontSize: 11,
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
