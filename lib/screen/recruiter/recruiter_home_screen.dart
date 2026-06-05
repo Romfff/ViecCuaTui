@@ -182,29 +182,51 @@ class _DashboardPage extends StatelessWidget {
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const ChatListScreen(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChatListScreen()),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.chat_bubble_outline, color: _kNavy, size: 20),
+                      ),
                     ),
-                  ),
-                  icon: const Icon(
-                    Icons.chat_bubble_outline,
-                    color: _kNavy,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationScreen(),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationScreen()),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.notifications_none_rounded, color: _kNavy, size: 20),
+                      ),
                     ),
-                  ),
-                  icon: const Icon(
-                    Icons.notifications_none_rounded,
-                    color: _kNavy,
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -1341,28 +1363,29 @@ class _InterviewCard extends StatelessWidget {
                 ],
               ),
             ),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onOpenMeet,
-                  icon: const Icon(Icons.video_camera_front),
-                  label: const Text('Mở Meet'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreenAccent,
+          if (isOnline)
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: onOpenMeet,
+                    icon: const Icon(Icons.video_camera_front),
+                    label: const Text('Mở Meet'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kGreenAccent,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onPasteMeetLink,
-                  icon: const Icon(Icons.paste),
-                  label: Text(meetLink != null ? 'Sửa' : 'Dán link'),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: onPasteMeetLink,
+                    icon: const Icon(Icons.paste),
+                    label: Text(meetLink != null ? 'Sửa' : 'Dán link'),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );

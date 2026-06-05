@@ -57,20 +57,40 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
   TimeOfDay? _selectedTime; // Thay thế _interviewTimeController
   String? _selectedInterviewType; // 'office' or 'meet'
   final TextEditingController _officeAddressController = TextEditingController();
+  final TextEditingController _meetLinkController = TextEditingController();
 
-  String get _decisionKey => widget.cvFileName?.trim().isNotEmpty == true
-      ? widget.cvFileName!
-      : widget.name;
+  String get _decisionKey {
+    if (widget.applicantId?.trim().isNotEmpty == true && widget.jobId?.trim().isNotEmpty == true) {
+      return '${widget.applicantId}_${widget.jobId}';
+    }
+    if (widget.cvFileName?.trim().isNotEmpty == true) {
+      return widget.cvFileName!;
+    }
+    return widget.name;
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedDecision = context.read<NotificationProvider>().getCvDecision(_decisionKey);
+    _officeAddressController.addListener(_onOfficeAddressChanged);
+    _meetLinkController.addListener(_onMeetLinkChanged);
+  }
+
+  void _onOfficeAddressChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onMeetLinkChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _officeAddressController.removeListener(_onOfficeAddressChanged);
+    _meetLinkController.removeListener(_onMeetLinkChanged);
     _officeAddressController.dispose();
+    _meetLinkController.dispose();
     super.dispose();
   }
 
@@ -326,14 +346,6 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                             content: Text('Đã gửi thông báo chấp nhận CV cho ứng viên.'),
                           ),
                         );
-                        // Nếu từ CandidateListScreen, quay lại; nếu không, hiển thị form phỏng vấn
-                        if (widget.fromCandidateList) {
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (mounted) {
-                              Navigator.pop(context);
-                            }
-                          });
-                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kGreenAccent,
@@ -606,7 +618,6 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                         ),
                       ],
                     ),
-                    // Office address field
                     if (_selectedInterviewType == 'office') ...[
                       const SizedBox(height: 16),
                       const Text(
@@ -621,8 +632,31 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                       TextField(
                         controller: _officeAddressController,
                         maxLines: 3,
+                        onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Nhập địa chỉ văn phòng',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ] else if (_selectedInterviewType == 'meet') ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Link Google Meet',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _kNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _meetLinkController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'Nhập link Google Meet',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -634,10 +668,14 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                     // Submit button
                     Builder(
                       builder: (context) {
-                        final isFormValid = _selectedDate != null && 
-                                           _selectedTime != null &&
-                                           _selectedInterviewType != null &&
-                                           (_selectedInterviewType == 'meet' || _officeAddressController.text.isNotEmpty);
+                        final isFormValid = _selectedDate != null &&
+                            _selectedTime != null &&
+                            _selectedInterviewType != null &&
+                            (_selectedInterviewType == 'meet'
+                                ? _meetLinkController.text.isNotEmpty
+                                : _selectedInterviewType == 'office'
+                                    ? _officeAddressController.text.isNotEmpty
+                                    : false);
                         
                         return CustomButton(
                           label: 'Xác Nhận Phỏng Vấn',
@@ -656,9 +694,9 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                               
                               final timeString = '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}';
                               final interview = InterviewModel(
-                                id: '', // Will be set by Firestore
+                                id: '', // Will be set by Firestore or local DB
                                 recruiterId: authProvider.user!.uid,
-                                candidateId: widget.name,
+                                candidateId: widget.applicantId ?? widget.name,
                                 candidateName: widget.name,
                                 candidateRole: widget.role,
                                 interviewTime: '${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year} - $timeString',
@@ -666,10 +704,21 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                                 createdAt: DateTime.now(),
                                 interviewType: _selectedInterviewType!,
                                 officeAddress: _selectedInterviewType == 'office' ? _officeAddressController.text : null,
+                                meetLink: _selectedInterviewType == 'meet' ? _meetLinkController.text : null,
                               );
 
                               final id = await interviewProvider.createInterview(interview);
                               if (id != null && id.isNotEmpty && mounted) {
+                                context.read<NotificationProvider>().addNotification(
+                                  NotificationModel(
+                                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                                    title: 'Phỏng vấn đã được xác nhận',
+                                    subtitle:
+                                        'Ứng viên ${widget.name}, cuộc phỏng vấn của bạn đã được lên lịch tại ${_selectedInterviewType == 'office' ? _officeAddressController.text : 'Google Meet'} vào $timeString ngày ${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}.',
+                                    createdAt: DateTime.now(),
+                                    recipientRole: 'job_seeker',
+                                  ),
+                                );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Đã tạo cuộc phỏng vấn thành công!'),

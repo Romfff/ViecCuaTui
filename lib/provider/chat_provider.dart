@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import '../services/local_db_service.dart';
 
 class ChatSession {
   final String id;
@@ -251,6 +252,21 @@ class ChatProvider extends ChangeNotifier {
 
     // Save message
     await messageRef.set(message.toMap());
+    // Also persist outgoing message locally
+    try {
+      await LocalDbService.instance.saveChatMessage({
+        'id': messageRef.id,
+        'sessionId': sessionId,
+        'senderId': senderId,
+        'senderName': senderName,
+        'senderRole': senderRole,
+        'text': text,
+        'createdAt': now.toIso8601String(),
+      });
+    } catch (e) {
+      // Non-fatal local persistence error
+      print('Local save failed: $e');
+    }
 
     // Update or create session
     final sessionRef = FirebaseFirestore.instance.collection('chat').doc(sessionId);

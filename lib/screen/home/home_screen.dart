@@ -33,6 +33,7 @@ class _DesktopScrollBehavior extends MaterialScrollBehavior {
   };
 }
 
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -118,9 +119,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: _kBg,
       body: pages[_currentIndex],
       bottomNavigationBar: _buildBottomNav(),
-          floatingActionButton: _currentIndex == 0 && auth.role == 'job_poster'
+      floatingActionButton: _currentIndex == 0 && auth.role == 'job_poster'
           ? FloatingActionButton(
-              backgroundColor: _kAccent, // Đổi màu nút nổi
+              backgroundColor: _kAccent,
               child: const Icon(Icons.add, color: _kNavy),
               onPressed: () => _showCreateJobDialog(context, auth, jobProv),
             )
@@ -214,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   MaterialPageRoute(builder: (_) => const ChatListScreen()),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -228,18 +229,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: const Icon(
                     Icons.chat_bubble_outline,
                     color: _kNavy,
-                    size: 24,
+                    size: 22,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 6),
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const NotificationScreen()),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     shape: BoxShape.circle,
@@ -810,8 +811,48 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(height: 15),
-          // Meet Link Section
-          if (interview.meetLink != null)
+          // Địa điểm hoặc thông tin Meet
+          if (interview.interviewType == 'office')
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: _kAccent.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kAccent, width: 1),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: _kAccent, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Địa chỉ phỏng vấn',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _kTextSec,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          interview.officeAddress ?? 'Đang cập nhật địa chỉ',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: _kNavy,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (interview.meetLink != null)
             Container(
               padding: const EdgeInsets.all(12),
               margin: const EdgeInsets.only(bottom: 15),
@@ -875,34 +916,35 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           // Action Buttons
-          Row(
-            children: [
-              if (interview.meetLink != null)
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await meetService.launchMeetingLink(interview.meetLink!);
-                    },
-                    icon: const Icon(Icons.video_call),
-                    label: const Text('Tham gia Meet'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kAccent,
+          if (interview.interviewType == 'meet')
+            Row(
+              children: [
+                if (interview.meetLink != null)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await meetService.launchMeetingLink(interview.meetLink!);
+                      },
+                      icon: const Icon(Icons.video_call),
+                      label: const Text('Tham gia Meet'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kAccent,
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.schedule),
+                      label: const Text('Chờ link'),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: _kTextSec),
+                      ),
                     ),
                   ),
-                )
-              else
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.schedule),
-                    label: const Text('Chờ link'),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: _kTextSec),
-                    ),
-                  ),
-                ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -1208,219 +1250,154 @@ class _LatestJobCard extends StatelessWidget {
     final auth = context.watch<AuthProvider>();
     final jobProv = context.read<JobProvider>();
     final isBookmarked = auth.bookmarkedJobIds.contains(job.id);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => JobDetailScreen(job: job)),
       ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: _kAccent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    job.company.isNotEmpty ? job.company[0] : '?',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: _kAccent,
-                    ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
+          ],
+        ),
+        child: Column(
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: _kAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      job.title,
+                  child: Center(
+                    child: Text(
+                      job.company.isNotEmpty ? job.company[0] : '?',
                       style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: _kNavy,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: _kAccent,
                       ),
                     ),
-                    Text(
-                      job.company,
-                      style: const TextStyle(color: _kTextSec, fontSize: 12),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: Icon(
-                  isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
-                  color: isBookmarked ? _kAccent : _kTextSec,
-                ),
-                onPressed: () {
-                  if (auth.user != null) {
-                    auth.toggleBookmark(job.id);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Vui lòng đăng nhập để lưu công việc'),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        job.title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: _kNavy,
+                        ),
                       ),
-                    );
-                  }
-                },
-              ),
-              if (auth.user?.uid == job.posterId)
+                      Text(
+                        job.company,
+                        style: const TextStyle(color: _kTextSec, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Colors.redAccent,
-                    size: 20,
+                  icon: Icon(
+                    isBookmarked ? Icons.bookmark : Icons.bookmark_outline,
+                    color: isBookmarked ? _kAccent : _kTextSec,
                   ),
-                  onPressed: () => jobProv.removeJob(job.id),
+                  onPressed: () {
+                    if (auth.user != null) {
+                      auth.toggleBookmark(job.id);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng đăng nhập để lưu công việc'),
+                        ),
+                      );
+                    }
+                  },
                 ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              const Icon(Icons.payments_outlined, size: 16, color: _kAccent),
-              const SizedBox(width: 4),
-              Text(
-                job.salary,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: _kNavy,
+                if (auth.user?.uid == job.posterId)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                    onPressed: () => jobProv.removeJob(job.id),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: <Widget>[
+                const Icon(Icons.payments_outlined, size: 16, color: _kAccent),
+                const SizedBox(width: 4),
+                Text(
+                  job.salary,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: _kNavy),
                 ),
-              ),
-              const SizedBox(width: 16),
-              const Icon(Icons.location_on_outlined, size: 16, color: _kAccent),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  job.location,
-                  style: const TextStyle(fontSize: 13, color: _kNavy),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: _kAccent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'MỚI ĐĂNG',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 16),
+                const Icon(Icons.location_on_outlined, size: 16, color: _kAccent),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    job.location,
+                    style: const TextStyle(fontSize: 13, color: _kNavy),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
-              Flexible(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        ElevatedButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => JobDetailScreen(job: job),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: _kAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: const Text('MỚI ĐĂNG', style: TextStyle(color: Colors.black, fontSize: 11, fontWeight: FontWeight.bold)),
+                ),
+                Flexible(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              if (auth.user == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng đăng nhập để liên hệ')));
+                                return;
+                              }
+                              final sessionId = "${auth.user!.uid}_${job.posterId}_${job.id}";
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => ChatScreen(sessionId: sessionId, contactId: job.posterId, contactName: job.company, contactRole: 'job_poster', contactSubtitle: job.title, jobId: job.id, jobTitle: job.title, jobCompany: job.company)));
+                            },
+                            icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                            label: const Text('Liên hệ'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: _kNavy,
+                              side: BorderSide(color: _kAccent),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _kAccent,
-                            foregroundColor: _kNavy,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 18,
-                              vertical: 10,
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Ứng tuyển nhanh',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            if (auth.user == null) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Vui lòng đăng nhập để liên hệ'),
-                                ),
-                              );
-                              return;
-                            }
-                            final sessionId = "${auth.user!.uid}_${job.posterId}_${job.id}";
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(
-                                  sessionId: sessionId,
-                                  contactId: job.posterId,
-                                  contactName: job.company,
-                                  contactRole: 'job_poster',
-                                  contactSubtitle: job.title,
-                                  jobId: job.id,
-                                  jobTitle: job.title,
-                                  jobCompany: job.company,
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                          label: const Text('Liên hệ'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: _kNavy,
-                            side: BorderSide(color: _kAccent),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

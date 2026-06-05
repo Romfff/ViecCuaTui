@@ -91,7 +91,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                 List<ApplicationModel> filtered = candidates;
                 if (_filterStatus != 'all') {
                   filtered = candidates.where((candidate) {
-                    final status = notifProvider.getCvDecision(candidate.applicantName);
+                    final status = notifProvider.getCvDecision('${candidate.applicantId}_${candidate.jobId}');
                     return status == _filterStatus;
                   }).toList();
                 }
@@ -159,7 +159,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final candidate = filtered[index];
-                    final status = notifProvider.getCvDecision(candidate.applicantName);
+                    final status = notifProvider.getCvDecision('${candidate.applicantId}_${candidate.jobId}');
                     return _buildCandidateCard(context, candidate, status);
                   },
                 );
@@ -352,7 +352,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                       print('Reject candidate: ${candidate.applicantName}');
                       context
                           .read<NotificationProvider>()
-                          .setCvDecision(candidate.applicantName, 'rejected');
+                          .setCvDecision('${candidate.applicantId}_${candidate.jobId}', 'rejected');
                       setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
