@@ -109,6 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> pages = [
       _buildHomeContent(auth, jobProv),
       _buildSavedJobs(auth, jobProv),
+      const MarketTrendScreen(),
       _buildCandidateInterviews(context),
       const ProfileScreen(),
     ];
@@ -160,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
-            onTap: () => setState(() => _currentIndex = 2),
+            onTap: () => setState(() => _currentIndex = 4),
             child: Container(
               width: 45,
               height: 45,
@@ -957,6 +958,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.bookmark_outline),
             activeIcon: Icon(Icons.bookmark),
             label: 'ĐÃ LƯU',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.trending_up_outlined),
+            activeIcon: Icon(Icons.trending_up),
+            label: 'XU HƯỚNG AI',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.event_note_outlined),
