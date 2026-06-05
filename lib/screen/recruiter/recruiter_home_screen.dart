@@ -177,10 +177,15 @@ class _DashboardPage extends StatelessWidget {
                 CircleAvatar(
                   backgroundColor: _kNavy,
                   radius: 22,
-                  child: Text(
-                    name[0].toUpperCase(),
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  backgroundImage: auth.avatarBytes != null
+                      ? MemoryImage(auth.avatarBytes!)
+                      : null,
+                  child: auth.avatarBytes == null
+                      ? Text(
+                          name[0].toUpperCase(),
+                          style: const TextStyle(color: Colors.white),
+                        )
+                      : null,
                 ),
                 IconButton(
                   onPressed: () => Navigator.push(
@@ -374,11 +379,16 @@ class _JobsManagementPageState extends State<_JobsManagementPage> {
                     CircleAvatar(
                       backgroundColor: _kGreenAccent,
                       radius: 18,
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 20,
-                      ),
+                      backgroundImage: widget.auth.avatarBytes != null
+                          ? MemoryImage(widget.auth.avatarBytes!)
+                          : null,
+                      child: widget.auth.avatarBytes == null
+                          ? const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 20,
+                            )
+                          : null,
                     ),
                   ],
                 ),

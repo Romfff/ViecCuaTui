@@ -17,7 +17,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  File? _profileImage;
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -32,10 +31,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (pickedFile != null) {
-      setState(() {
-        _profileImage = File(pickedFile.path);
-      });
+      final bytes = await pickedFile.readAsBytes();
       if (mounted) {
+        await context.read<AuthProvider>().updateAvatar(bytes);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Ảnh hồ sơ đã được tải lên.'),
@@ -88,10 +86,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 shape: BoxShape.circle,
                                 border: Border.all(color: _kPrimary.withOpacity(0.5), width: 2.5),
                               ),
-                              child: _profileImage != null
+                              child: auth.avatarBytes != null
                                   ? ClipOval(
-                                      child: Image.file(
-                                        _profileImage!,
+                                      child: Image.memory(
+                                        auth.avatarBytes!,
                                         fit: BoxFit.cover,
                                       ),
                                     )

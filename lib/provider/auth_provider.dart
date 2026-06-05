@@ -1,6 +1,8 @@
-﻿import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:typed_data';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -13,6 +15,7 @@ class AuthProvider extends ChangeNotifier {
   String? hobbies;
   String? strengths;
   String? dreamJob;
+  Uint8List? avatarBytes;
   List<String> bookmarkedJobIds = [];
   bool isLoading = false;
   String? errorMessage;
@@ -24,6 +27,7 @@ class AuthProvider extends ChangeNotifier {
       } else {
         role = null;
         bookmarkedJobIds = [];
+        avatarBytes = null;
       }
       notifyListeners();
     });
@@ -41,12 +45,33 @@ class AuthProvider extends ChangeNotifier {
       hobbies = data?['hobbies'] as String?;
       strengths = data?['strengths'] as String?;
       dreamJob = data?['dreamJob'] as String?;
+
+      // Load avatar from Hive
+      try {
+        final avatarBox = await Hive.openBox<Uint8List>('user_avatars');
+        avatarBytes = avatarBox.get(uid);
+      } catch (e) {
+        print('Error loading avatar from Hive: $e');
+      }
     } catch (_) {
       role = 'job_seeker';
       bookmarkedJobIds = [];
       hobbies = null;
       strengths = null;
       dreamJob = null;
+      avatarBytes = null;
+    }
+  }
+
+  Future<void> updateAvatar(Uint8List bytes) async {
+    if (user == null) return;
+    avatarBytes = bytes;
+    notifyListeners();
+    try {
+      final avatarBox = await Hive.openBox<Uint8List>('user_avatars');
+      await avatarBox.put(user!.uid, bytes);
+    } catch (e) {
+      print('Error saving avatar to Hive: $e');
     }
   }
 
@@ -112,6 +137,7 @@ class AuthProvider extends ChangeNotifier {
     user = null;
     role = null;
     bookmarkedJobIds = [];
+    avatarBytes = null;
     notifyListeners();
   }
 
