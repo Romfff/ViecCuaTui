@@ -21,12 +21,21 @@ class NotificationProvider extends ChangeNotifier {
 
   void markAllRead() {
     for (var i = 0; i < _notifications.length; i++) {
+      final old = _notifications[i];
       _notifications[i] = NotificationModel(
-        id: _notifications[i].id,
-        title: _notifications[i].title,
-        subtitle: _notifications[i].subtitle,
-        createdAt: _notifications[i].createdAt,
+        id: old.id,
+        title: old.title,
+        subtitle: old.subtitle,
+        createdAt: old.createdAt,
         isRead: true,
+        recipientRole: old.recipientRole,
+        applicantName: old.applicantName,
+        applicantRole: old.applicantRole,
+        cvFileName: old.cvFileName,
+        cvBytes: old.cvBytes,
+        cvBody: old.cvBody,
+        applicantId: old.applicantId,
+        jobId: old.jobId,
       );
     }
     notifyListeners();

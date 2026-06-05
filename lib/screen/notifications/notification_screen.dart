@@ -71,6 +71,8 @@ class NotificationScreen extends StatelessWidget {
                                 cvBody: item.cvBody,
                                 cvFileName: item.cvFileName,
                                 cvBytes: item.cvBytes,
+                                applicantId: item.applicantId,
+                                jobId: item.jobId,
                               ),
                             ),
                           );

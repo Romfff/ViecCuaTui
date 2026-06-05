@@ -12,6 +12,8 @@ class NotificationModel {
   final String? cvFileName;
   final Uint8List? cvBytes;
   final String? cvBody;
+  final String? applicantId;
+  final String? jobId;
 
   const NotificationModel({
     required this.id,
@@ -25,5 +27,7 @@ class NotificationModel {
     this.cvFileName,
     this.cvBytes,
     this.cvBody,
+    this.applicantId,
+    this.jobId,
   });
 }

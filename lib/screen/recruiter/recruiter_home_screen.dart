@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import '../../models/notification_model.dart';
 import '../../models/interview_model.dart';
+import '../../models/application_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../../provider/notification_provider.dart';
@@ -147,8 +149,16 @@ class _DashboardPage extends StatelessWidget {
 
     // 2. Calculate Received CVs/Applications Statistics (HỒ SƠ MỚI)
     final recruiterJobIds = recruiterJobs.map((job) => job.id).toSet();
-    final recruiterApps = appProv.applications.where((app) => recruiterJobIds.contains(app.jobId)).toList();
-    final pendingApps = recruiterApps.where((app) => notifProv.getCvDecision(app.applicantName) == null).toList();
+    final List<ApplicationModel> recruiterAppsRaw = appProv.applications.where((app) => recruiterJobIds.contains(app.jobId)).toList();
+    
+    // Deduplicate applications keeping the latest one of each candidate per job
+    final Map<String, ApplicationModel> recruiterAppsMap = {};
+    for (var app in recruiterAppsRaw) {
+      recruiterAppsMap['${app.applicantId}_${app.jobId}'] = app;
+    }
+    final List<ApplicationModel> recruiterApps = recruiterAppsMap.values.toList();
+    
+    final List<ApplicationModel> pendingApps = recruiterApps.where((app) => notifProv.getCvDecision('${app.applicantId}_${app.jobId}') == null).toList();
 
     // 3. Calculate Completed Interviews Statistics (ĐÃ PHỎNG VẤN)
     final completedInterviewsCount = interviewProv.recruiterInterviews.where((i) => i.status == 'completed').length;
@@ -156,14 +166,16 @@ class _DashboardPage extends StatelessWidget {
     // 4. Calculate Upcoming/Pending Interviews Statistics (CHỜ PHỎNG VẤN)
     final pendingInterviewsCount = interviewProv.recruiterInterviews.where((i) => i.status == 'pending' || i.status == 'ongoing').length;
 
-    // Filter latest candidates to show only those who applied today
+    // Filter latest candidates to show only those who applied today and are still pending (not approved/rejected yet)
     final today = DateTime.now();
     final todayStart = DateTime(today.year, today.month, today.day);
-    final todayApps = recruiterApps.where((app) {
+    final List<ApplicationModel> todayApps = recruiterApps.where((app) {
       if (app.appliedAt == null) return false;
-      return app.appliedAt!.isAfter(todayStart);
+      final isToday = app.appliedAt!.isAfter(todayStart);
+      final isPending = notifProv.getCvDecision('${app.applicantId}_${app.jobId}') == null;
+      return isToday && isPending;
     }).toList();
-    final latestApps = todayApps.reversed.toList();
+    final List<ApplicationModel> latestApps = todayApps.reversed.toList();
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -288,7 +300,7 @@ class _DashboardPage extends StatelessWidget {
                 ),
               )
             else
-              ...latestApps.map((app) {
+              ...latestApps.map((ApplicationModel app) {
                 final matchPercent = '${80 + (app.applicantName.length * 3) % 20}%';
                 return _CandidateItem(
                   name: app.applicantName,
@@ -439,11 +451,27 @@ class _InterviewsPageState extends State<_InterviewsPage> {
   final Map<String, TextEditingController> _meetLinkControllers = {};
   late InterviewProvider _interviewProvider;
   late DateTime _focusedDate;
+  late ScrollController _scrollController;
+  late final DateTime _startDate;
+  late final List<DateTime> _scrollableDays;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _focusedDate = widget.initialDate ?? DateTime.now();
+    
+    final today = DateTime.now();
+    final todayClean = DateTime(today.year, today.month, today.day);
+    _startDate = todayClean.subtract(const Duration(days: 90));
+    _scrollableDays = List.generate(90 + 730 + 1, (index) => _startDate.add(Duration(days: index)));
+    
+    final initialIndex = _focusedDate.difference(_startDate).inDays;
+    final itemWidth = 65.0 + 12.0; // container width (65) + margin right (12)
+    final initialOffset = (initialIndex * itemWidth - 100.0).clamp(0.0, double.infinity);
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _interviewProvider = context.read<InterviewProvider>();
       final auth = context.read<AuthProvider>();
@@ -453,20 +481,115 @@ class _InterviewsPageState extends State<_InterviewsPage> {
     });
   }
 
+  void _scrollToFocusedDate({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    final index = _focusedDate.difference(_startDate).inDays;
+    final itemWidth = 65.0 + 12.0;
+    final targetOffset = (index * itemWidth - 100.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+    if (animate) {
+      _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _scrollController.jumpTo(targetOffset);
+    }
+  }
+
+  void _selectDate(DateTime day) {
+    setState(() {
+      _focusedDate = day;
+    });
+    _scrollToFocusedDate();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+    
+    // Check if the query is a date pattern like "dd/MM/yyyy" or "dd/MM"
+    final dateRegExp = RegExp(r'^(\d{1,2})/(\d{1,2})(/\d{4})?$');
+    if (dateRegExp.hasMatch(query.trim())) {
+      final match = dateRegExp.firstMatch(query.trim());
+      if (match != null) {
+        try {
+          final day = int.parse(match.group(1)!);
+          final month = int.parse(match.group(2)!);
+          final now = DateTime.now();
+          int year = now.year;
+          if (match.group(3) != null) {
+            year = int.parse(match.group(3)!.substring(1));
+          }
+          final targetDate = DateTime(year, month, day);
+          
+          if (targetDate.isAfter(_startDate.subtract(const Duration(days: 1))) &&
+              targetDate.isBefore(_startDate.add(Duration(days: _scrollableDays.length)))) {
+            _selectDate(targetDate);
+          }
+        } catch (_) {
+          // Ignore parse errors
+        }
+      }
+    }
+  }
+
+  Future<void> _openQuickDatePicker(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _focusedDate,
+      firstDate: _startDate,
+      lastDate: _startDate.add(Duration(days: _scrollableDays.length - 1)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: _kNavy,
+              onPrimary: Colors.white,
+              onSurface: _kNavy,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: _kGreenAccent,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      _selectDate(picked);
+      _searchController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    }
+  }
+
   @override
   void didUpdateWidget(covariant _InterviewsPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialDate != oldWidget.initialDate && widget.initialDate != null) {
       _focusedDate = widget.initialDate!;
+      _scrollToFocusedDate();
     }
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
     for (var controller in _meetLinkControllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.day == now.day && date.month == now.month && date.year == now.year;
   }
 
   DateTime getMonday(DateTime date) {
@@ -699,24 +822,12 @@ class _InterviewsPageState extends State<_InterviewsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    int daysCount = 8;
-    if (widget.initialDate != null) {
-      final initialDateClean = DateTime(widget.initialDate!.year, widget.initialDate!.month, widget.initialDate!.day);
-      final diff = initialDateClean.difference(todayDate).inDays;
-      if (diff > 7) {
-        daysCount = diff + 1;
-      }
-    }
-    final scrollableDays = List.generate(daysCount, (index) => todayDate.add(Duration(days: index)));
-
     return SafeArea(
       child: Consumer<InterviewProvider>(
         builder: (context, interviewProvider, _) {
           final interviews = interviewProvider.recruiterInterviews;
           
-          // Filter interviews for the selected day
+          // Filter interviews for the selected day and search query
           final filteredInterviews = interviews.where((interview) {
             try {
               final parts = interview.interviewTime.split(' - ');
@@ -726,9 +837,23 @@ class _InterviewsPageState extends State<_InterviewsPage> {
               final year = int.parse(dateParts[2]);
               
               final interviewDate = DateTime(year, month, day);
-              return interviewDate.day == _focusedDate.day &&
+              final matchesDate = interviewDate.day == _focusedDate.day &&
                   interviewDate.month == _focusedDate.month &&
                   interviewDate.year == _focusedDate.year;
+                  
+              if (_searchQuery.isEmpty) return matchesDate;
+              
+              final queryLower = _searchQuery.toLowerCase();
+              
+              // If query matches current selected date formatting, don't filter candidate names out
+              if (queryLower == '${_focusedDate.day.toString().padLeft(2, '0')}/${_focusedDate.month.toString().padLeft(2, '0')}/${_focusedDate.year}') {
+                return matchesDate;
+              }
+              
+              final matchesSearch = interview.candidateName.toLowerCase().contains(queryLower) ||
+                  interview.candidateRole.toLowerCase().contains(queryLower);
+              
+              return matchesDate && matchesSearch;
             } catch (e) {
               return false;
             }
@@ -748,36 +873,108 @@ class _InterviewsPageState extends State<_InterviewsPage> {
                   ),
                 ),
                 Text(
-                  filteredInterviews.isEmpty
-                      ? 'Bạn chưa có lịch phỏng vấn nào hôm nay'
-                      : 'Bạn có ${filteredInterviews.length} cuộc phỏng vấn hôm nay',
+                  _isToday(_focusedDate)
+                      ? (filteredInterviews.isEmpty
+                          ? 'Bạn chưa có lịch phỏng vấn nào hôm nay'
+                          : 'Bạn có ${filteredInterviews.length} cuộc phỏng vấn hôm nay')
+                      : (filteredInterviews.isEmpty
+                          ? 'Bạn chưa có lịch phỏng vấn nào ngày ${_focusedDate.day.toString().padLeft(2, '0')}/${_focusedDate.month.toString().padLeft(2, '0')}/${_focusedDate.year}'
+                          : 'Bạn có ${filteredInterviews.length} cuộc phỏng vấn ngày ${_focusedDate.day.toString().padLeft(2, '0')}/${_focusedDate.month.toString().padLeft(2, '0')}/${_focusedDate.year}'),
                   style: const TextStyle(color: _kTextSub),
                 ),
-                const SizedBox(height: 25),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
+                const SizedBox(height: 20),
+                // Search bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
                   child: Row(
-                    children: scrollableDays.map((day) {
-                      final isSelected = _focusedDate.day == day.day &&
-                          _focusedDate.month == day.month &&
-                          _focusedDate.year == day.year;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _focusedDate = day;
-                            });
-                          },
-                          child: _DateNode(
-                            day: _getWeekdayName(day.weekday),
-                            date: day.day.toString(),
-                            isSelected: isSelected,
+                    children: [
+                      const Icon(Icons.search, color: _kNavy, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: _onSearchChanged,
+                          decoration: const InputDecoration(
+                            hintText: 'Tìm ngày (ngày/tháng/năm) hoặc tên ứng viên...',
+                            hintStyle: TextStyle(color: _kTextSub, fontSize: 13),
+                            border: InputBorder.none,
+                            isDense: true,
                           ),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      if (_searchQuery.isNotEmpty)
+                        IconButton(
+                          icon: const Icon(Icons.clear, color: _kTextSub, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            _onSearchChanged('');
+                          },
+                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.zero,
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.calendar_month, color: _kGreenAccent, size: 22),
+                        onPressed: () => _openQuickDatePicker(context),
+                        constraints: const BoxConstraints(),
+                        padding: const EdgeInsets.only(left: 8, top: 12, bottom: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 25),
+                Text(
+                  'Tháng ${_focusedDate.month}, ${_focusedDate.year}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _kNavy,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 80,
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                        PointerDeviceKind.trackpad,
+                      },
+                    ),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _scrollableDays.length,
+                      itemBuilder: (context, index) {
+                        final day = _scrollableDays[index];
+                        final isSelected = _focusedDate.day == day.day &&
+                            _focusedDate.month == day.month &&
+                            _focusedDate.year == day.year;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: GestureDetector(
+                            onTap: () => _selectDate(day),
+                            child: _DateNode(
+                              day: _getWeekdayName(day.weekday),
+                              date: day.day.toString(),
+                              isSelected: isSelected,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 const SizedBox(height: 30),
@@ -1005,52 +1202,32 @@ class _CandidateItem extends StatelessWidget {
                 ],
               ),
             ),
-            Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _kGreenAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    match,
-                    style: const TextStyle(
-                      color: _kGreenAccent,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CandidateCvDetailScreen(
+                      name: name,
+                      role: role,
+                      cvBody: cvBody,
+                      applicantId: applicantId,
+                      jobId: jobId,
+                      jobTitle: jobTitle,
+                      jobCompany: jobCompany,
                     ),
                   ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _kGreenAccent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    context.read<NotificationProvider>().addNotification(
-                      NotificationModel(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        title: 'Hồ sơ của $name đã được duyệt',
-                        subtitle:
-                            'Ứng viên $name ($role) đã được xác nhận phỏng vấn.',
-                        createdAt: DateTime.now(),
-                        recipientRole: 'job_seeker',
-                      ),
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Đã tạo thông báo duyệt hồ sơ.'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreenAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    minimumSize: const Size(80, 34),
-                  ),
-                  child: const Text('Duyệt', style: TextStyle(fontSize: 12)),
-                ),
-              ],
+                minimumSize: const Size(80, 34),
+              ),
+              child: const Text('Duyệt', style: TextStyle(fontSize: 12)),
             ),
           ],
         ),
@@ -1566,20 +1743,34 @@ class _DateNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      width: 65,
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: isSelected ? _kNavy : Colors.white,
         borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          if (!isSelected)
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+        ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
             day,
             style: TextStyle(
               color: isSelected ? Colors.white70 : _kTextSub,
               fontSize: 10,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
             date,
             style: TextStyle(

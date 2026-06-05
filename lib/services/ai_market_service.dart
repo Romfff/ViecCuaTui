@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:http/http.dart' as http;
 
 class IndustryGrowth {
   final String name;
@@ -108,34 +109,30 @@ class AiMarketService {
         '3. **Lợi thế cạnh tranh:** Tận dụng điểm mạnh của bạn làm bệ phóng, tập trung tạo ra các sản phẩm/dự án cá nhân thực chiến để ghi điểm với nhà tuyển dụng.';
   }
 
-  // AI chat bot response generator
+  // AI chat bot response generator calling the backend middle-man server
   Future<String> askAiQuestion(String question, String? dreamJob) async {
-    // Simulate API delay
-    await Future.delayed(const Duration(milliseconds: 1200));
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:3000/api/chat'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'message': question,
+          'dreamJob': dreamJob ?? '',
+        }),
+      ).timeout(const Duration(seconds: 25));
 
-    final q = question.toLowerCase();
-    final job = dreamJob?.trim().isNotEmpty == true ? dreamJob! : 'ngành công nghệ / kinh doanh';
-
-    if (q.contains('lương') || q.contains('thu nhập') || q.contains('tiền')) {
-      return 'Mức lương trung bình của các vị trí liên quan đến **$job** năm 2026 đang dao động khá rộng. \n\n'
-          '- **Mới tốt nghiệp/Junior:** 12M - 20M VND.\n'
-          '- **Mid-level/Senior:** 25M - 55M VND.\n'
-          '- **Chuyên gia AI/Đám mây:** 60M - 100M+ VND.\n\n'
-          'Lời khuyên: Tập trung vào kỹ năng chuyên sâu thay vì số năm kinh nghiệm đơn thuần để đạt mức thu nhập mong muốn.';
+      if (response.statusCode == 200) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        return data['reply'] ?? 'Rất tiếc, AI không phản hồi câu trả lời hợp lệ.';
+      } else {
+        print('Backend Chat Error: ${response.statusCode} - ${response.body}');
+        return 'Rất tiếc, server đang bận hoặc gặp lỗi. Vui lòng thử lại sau.';
+      }
+    } catch (e) {
+      print('Network connection error: $e');
+      return 'Không thể kết nối đến máy chủ trợ lý AI. Vui lòng kiểm tra lại kết nối mạng của bạn.';
     }
-
-    if (q.contains('thay thế') || q.contains('bị mất') || q.contains('ai cướp')) {
-      return 'AI sẽ không thay thế hoàn toàn vị trí **$job**, nhưng **những người biết dùng AI** sẽ thay thế những người không biết dùng.\n\n'
-          'Các công việc lặp đi lặp lại như soạn thảo văn bản thô, dịch thuật cơ bản, hoặc phân loại dữ liệu thủ công đang bị ảnh hưởng lớn. Hãy nâng cấp bản thân lên vị trí làm chủ công cụ và đưa ra quyết định sáng tạo.';
-    }
-
-    if (q.contains('học') || q.contains('kỹ năng') || q.contains('khóa học')) {
-      return 'Để đi đầu trong **$job**, bạn nên tập trung học các kỹ năng:\n\n'
-          '1. **Kỹ năng chuyên môn:** Nắm vững cấu trúc dữ liệu, thuật toán hoặc quy trình nghiệp vụ chính.\n'
-          '2. **Kỹ năng AI:** Học cách viết Prompt hiệu quả, sử dụng Github Copilot, Gemini hoặc các AI Tools chuyên ngành.\n'
-          '3. **Kỹ năng mềm:** Giao tiếp mạch lạc và tư duy thiết kế giải pháp.';
-    }
-
-    return 'Cảm ơn câu hỏi của bạn về **$job**! Xu hướng thị trường tuyển dụng năm 2026 đòi hỏi ứng viên phải luôn linh hoạt thích ứng. Bạn nên tập trung xây dựng năng lực tự học, làm quen với các công cụ tự động hóa công việc và luôn cập nhật các báo cáo tuyển dụng định kỳ.';
   }
 }

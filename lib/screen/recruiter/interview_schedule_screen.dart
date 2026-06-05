@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../models/interview_model.dart';
@@ -25,11 +26,27 @@ class InterviewScheduleScreen extends StatefulWidget {
 
 class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
   late DateTime _focusedDate;
+  late ScrollController _scrollController;
+  late final DateTime _startDate;
+  late final List<DateTime> _scrollableDays;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _focusedDate = widget.initialDate ?? DateTime.now();
+    
+    final today = DateTime.now();
+    final todayClean = DateTime(today.year, today.month, today.day);
+    _startDate = todayClean.subtract(const Duration(days: 90));
+    _scrollableDays = List.generate(90 + 730 + 1, (index) => _startDate.add(Duration(days: index)));
+    
+    final initialIndex = _focusedDate.difference(_startDate).inDays;
+    final itemWidth = 65.0 + 12.0; // container width (65) + margin right (12)
+    final initialOffset = (initialIndex * itemWidth - 100.0).clamp(0.0, double.infinity);
+    _scrollController = ScrollController(initialScrollOffset: initialOffset);
+
     // Listen to recruiter interviews with actual recruiter ID
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = context.read<AuthProvider>();
@@ -37,6 +54,105 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
         context.read<InterviewProvider>().listenRecruiterInterviews(authProvider.user!.uid);
       }
     });
+  }
+
+  void _scrollToFocusedDate({bool animate = true}) {
+    if (!_scrollController.hasClients) return;
+    final index = _focusedDate.difference(_startDate).inDays;
+    final itemWidth = 65.0 + 12.0;
+    final targetOffset = (index * itemWidth - 100.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+    if (animate) {
+      _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      _scrollController.jumpTo(targetOffset);
+    }
+  }
+
+  void _selectDate(DateTime day) {
+    setState(() {
+      _focusedDate = day;
+    });
+    _scrollToFocusedDate();
+  }
+
+  void _onSearchChanged(String query) {
+    setState(() {
+      _searchQuery = query;
+    });
+    
+    // Check if the query is a date pattern like "dd/MM/yyyy" or "dd/MM"
+    final dateRegExp = RegExp(r'^(\d{1,2})/(\d{1,2})(/\d{4})?$');
+    if (dateRegExp.hasMatch(query.trim())) {
+      final match = dateRegExp.firstMatch(query.trim());
+      if (match != null) {
+        try {
+          final day = int.parse(match.group(1)!);
+          final month = int.parse(match.group(2)!);
+          final now = DateTime.now();
+          int year = now.year;
+          if (match.group(3) != null) {
+            year = int.parse(match.group(3)!.substring(1));
+          }
+          final targetDate = DateTime(year, month, day);
+          
+          if (targetDate.isAfter(_startDate.subtract(const Duration(days: 1))) &&
+              targetDate.isBefore(_startDate.add(Duration(days: _scrollableDays.length)))) {
+            _selectDate(targetDate);
+          }
+        } catch (_) {
+          // Ignore parse errors
+        }
+      }
+    }
+  }
+
+  Future<void> _openQuickDatePicker(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _focusedDate,
+      firstDate: _startDate,
+      lastDate: _startDate.add(Duration(days: _scrollableDays.length - 1)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: _kNavy,
+              onPrimary: Colors.white,
+              onSurface: _kNavy,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: _kGreenAccent,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      _selectDate(picked);
+      _searchController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.day == now.day && date.month == now.month && date.year == now.year;
   }
 
   DateTime getMonday(DateTime date) {
@@ -50,9 +166,6 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final weekStart = getMonday(_focusedDate);
-    final weekDays = getWeekDays(weekStart);
-
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
@@ -76,9 +189,8 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
         builder: (context, interviewProvider, _) {
           final interviews = interviewProvider.recruiterInterviews;
           
-          // Filter interviews for the selected day
+          // Filter interviews for the selected day and search query
           final filteredInterviews = interviews.where((interview) {
-            // Parse the interview time to get the date
             try {
               final parts = interview.interviewTime.split(' - ');
               final dateParts = parts[0].split('/');
@@ -87,9 +199,23 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
               final year = int.parse(dateParts[2]);
               
               final interviewDate = DateTime(year, month, day);
-              return interviewDate.day == _focusedDate.day &&
+              final matchesDate = interviewDate.day == _focusedDate.day &&
                   interviewDate.month == _focusedDate.month &&
                   interviewDate.year == _focusedDate.year;
+                  
+              if (_searchQuery.isEmpty) return matchesDate;
+              
+              final queryLower = _searchQuery.toLowerCase();
+              
+              // If query matches current selected date formatting, don't filter candidate names out
+              if (queryLower == '${_focusedDate.day.toString().padLeft(2, '0')}/${_focusedDate.month.toString().padLeft(2, '0')}/${_focusedDate.year}') {
+                return matchesDate;
+              }
+              
+              final matchesSearch = interview.candidateName.toLowerCase().contains(queryLower) ||
+                  interview.candidateRole.toLowerCase().contains(queryLower);
+              
+              return matchesDate && matchesSearch;
             } catch (e) {
               return false;
             }
@@ -107,21 +233,37 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                     children: [
                       // Title subtitle
                       Text(
-                        'Bạn có ${interviews.where((i) {
-                          try {
-                            final parts = i.interviewTime.split(' - ');
-                            final dateParts = parts[0].split('/');
-                            final day = int.parse(dateParts[0]);
-                            final month = int.parse(dateParts[1]);
-                            final year = int.parse(dateParts[2]);
-                            final interviewDate = DateTime(year, month, day);
-                            return interviewDate.day == _focusedDate.day &&
-                                interviewDate.month == _focusedDate.month &&
-                                interviewDate.year == _focusedDate.year;
-                          } catch (e) {
-                            return false;
-                          }
-                        }).length} cuộc phỏng vấn hôm nay',
+                        _isToday(_focusedDate)
+                            ? 'Bạn có ${interviews.where((i) {
+                                try {
+                                  final parts = i.interviewTime.split(' - ');
+                                  final dateParts = parts[0].split('/');
+                                  final day = int.parse(dateParts[0]);
+                                  final month = int.parse(dateParts[1]);
+                                  final year = int.parse(dateParts[2]);
+                                  final interviewDate = DateTime(year, month, day);
+                                  return interviewDate.day == _focusedDate.day &&
+                                      interviewDate.month == _focusedDate.month &&
+                                      interviewDate.year == _focusedDate.year;
+                                } catch (e) {
+                                  return false;
+                                }
+                              }).length} cuộc phỏng vấn hôm nay'
+                            : 'Bạn có ${interviews.where((i) {
+                                try {
+                                  final parts = i.interviewTime.split(' - ');
+                                  final dateParts = parts[0].split('/');
+                                  final day = int.parse(dateParts[0]);
+                                  final month = int.parse(dateParts[1]);
+                                  final year = int.parse(dateParts[2]);
+                                  final interviewDate = DateTime(year, month, day);
+                                  return interviewDate.day == _focusedDate.day &&
+                                      interviewDate.month == _focusedDate.month &&
+                                      interviewDate.year == _focusedDate.year;
+                                } catch (e) {
+                                  return false;
+                                }
+                              }).length} cuộc phỏng vấn ngày ${_focusedDate.day.toString().padLeft(2, '0')}/${_focusedDate.month.toString().padLeft(2, '0')}/${_focusedDate.year}',
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
@@ -129,56 +271,126 @@ class _InterviewScheduleScreenState extends State<InterviewScheduleScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      // Day picker - simplified
-                      SizedBox(
-                        height: 80,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: 7,
-                          itemBuilder: (context, index) {
-                            final day = weekDays[index];
-                            final isSelected = _focusedDate.day == day.day &&
-                                _focusedDate.month == day.month &&
-                                _focusedDate.year == day.year;
-                            
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _focusedDate = day;
-                                });
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 12),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? _kNavy : Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'TH ${day.weekday}',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected ? Colors.white : _kTextSub,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      day.day.toString(),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? Colors.white : _kNavy,
-                                      ),
-                                    ),
-                                  ],
+                      // Search bar
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, color: _kNavy, size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: _onSearchChanged,
+                                decoration: const InputDecoration(
+                                  hintText: 'Tìm ngày (ngày/tháng/năm) hoặc ứng viên...',
+                                  hintStyle: TextStyle(color: _kTextSub, fontSize: 13),
+                                  border: InputBorder.none,
+                                  isDense: true,
                                 ),
                               ),
-                            );
-                          },
+                            ),
+                            if (_searchQuery.isNotEmpty)
+                              IconButton(
+                                icon: const Icon(Icons.clear, color: _kTextSub, size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _onSearchChanged('');
+                                },
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.calendar_month, color: _kGreenAccent, size: 22),
+                              onPressed: () => _openQuickDatePicker(context),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.only(left: 8, top: 10, bottom: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tháng ${_focusedDate.month}, ${_focusedDate.year}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: _kNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Day picker - scrollable up to 2 years
+                      SizedBox(
+                        height: 80,
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(
+                            dragDevices: {
+                              PointerDeviceKind.touch,
+                              PointerDeviceKind.mouse,
+                              PointerDeviceKind.trackpad,
+                            },
+                          ),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: _scrollableDays.length,
+                            itemBuilder: (context, index) {
+                              final day = _scrollableDays[index];
+                              final isSelected = _focusedDate.day == day.day &&
+                                  _focusedDate.month == day.month &&
+                                  _focusedDate.year == day.year;
+                              
+                              return GestureDetector(
+                                onTap: () => _selectDate(day),
+                                child: Container(
+                                  width: 65,
+                                  margin: const EdgeInsets.only(right: 12),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? _kNavy : Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      if (!isSelected)
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.02),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        'TH ${day.weekday}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: isSelected ? Colors.white : _kTextSub,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        day.day.toString(),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: isSelected ? Colors.white : _kNavy,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                     ],

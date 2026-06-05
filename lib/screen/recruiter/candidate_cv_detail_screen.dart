@@ -58,9 +58,123 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
   String? _selectedInterviewType; // 'office' or 'meet'
   final TextEditingController _officeAddressController = TextEditingController();
 
-  String get _decisionKey => widget.cvFileName?.trim().isNotEmpty == true
-      ? widget.cvFileName!
-      : widget.name;
+  String get _decisionKey {
+    if (widget.applicantId != null && widget.applicantId!.isNotEmpty && 
+        widget.jobId != null && widget.jobId!.isNotEmpty) {
+      return '${widget.applicantId}_${widget.jobId}';
+    }
+    return widget.cvFileName?.trim().isNotEmpty == true
+        ? widget.cvFileName!
+        : widget.name;
+  }
+
+  NotificationModel? get _matchingNotification {
+    if (widget.applicantId == null || widget.jobId == null) return null;
+    final notifications = context.read<NotificationProvider>().notifications;
+    try {
+      return notifications.firstWhere((n) => 
+        n.applicantId == widget.applicantId && 
+        n.jobId == widget.jobId && 
+        n.cvBytes != null
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Uint8List? get _cvBytes => widget.cvBytes ?? _matchingNotification?.cvBytes;
+  String? get _cvFileName => widget.cvFileName ?? _matchingNotification?.cvFileName;
+
+  bool get _isImage {
+    final fileName = _cvFileName;
+    if (fileName == null) return false;
+    final name = fileName.toLowerCase();
+    return name.endsWith('.jpg') ||
+        name.endsWith('.jpeg') ||
+        name.endsWith('.png') ||
+        name.endsWith('.gif') ||
+        name.endsWith('.webp');
+  }
+
+  void _showCvPreviewDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final hasBytes = _cvBytes != null && _cvBytes!.isNotEmpty;
+        final hasBody = widget.cvBody != null && widget.cvBody!.trim().isNotEmpty;
+        
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Xem CV Trực Tiếp',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: _kNavy,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: _kNavy),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: hasBytes
+                        ? (_isImage
+                            ? InteractiveViewer(
+                                child: Image.memory(
+                                  _cvBytes!,
+                                  fit: BoxFit.contain,
+                                ),
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.insert_drive_file, size: 64, color: _kNavy),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    _cvFileName ?? 'CV File',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text('${_cvBytes!.length} bytes'),
+                                ],
+                              ))
+                        : (hasBody
+                            ? Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  widget.cvBody!,
+                                  style: const TextStyle(fontSize: 14, height: 1.6, color: _kNavy),
+                                ),
+                              )
+                            : const Center(
+                                child: Text('Không có dữ liệu CV để hiển thị'),
+                              )),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -88,9 +202,9 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final hasBytes = widget.cvBytes != null && widget.cvBytes!.isNotEmpty;
+    final hasBytes = _cvBytes != null && _cvBytes!.isNotEmpty;
     final hasBody = widget.cvBody != null && widget.cvBody!.trim().isNotEmpty;
-    final fileName = widget.cvFileName ?? (hasBytes ? '${widget.name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_')}-CV.bin' : null);
+    final fileName = _cvFileName ?? (hasBytes ? '${widget.name.replaceAll(RegExp(r'[^A-Za-z0-9_]'), '_')}-CV.bin' : null);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -201,6 +315,25 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                     ),
             ),
             const SizedBox(height: 20),
+            if (hasBytes || hasBody) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showCvPreviewDialog(context),
+                  icon: const Icon(Icons.visibility),
+                  label: const Text('Xem CV trực tiếp'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kNavy,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -219,7 +352,7 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                         final file = File('${directory.path}${Platform.pathSeparator}$safeName');
 
                         if (hasBytes) {
-                          await file.writeAsBytes(widget.cvBytes!);
+                          await file.writeAsBytes(_cvBytes!);
                         } else {
                           await file.writeAsString(widget.cvBody ?? '');
                         }
@@ -318,7 +451,9 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                             recipientRole: 'job_seeker',
                             applicantName: widget.name,
                             applicantRole: widget.role,
-                            cvFileName: widget.cvFileName,
+                            cvFileName: _cvFileName,
+                            applicantId: widget.applicantId,
+                            jobId: widget.jobId,
                           ),
                         );
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -363,7 +498,9 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
                             recipientRole: 'job_seeker',
                             applicantName: widget.name,
                             applicantRole: widget.role,
-                            cvFileName: widget.cvFileName,
+                            cvFileName: _cvFileName,
+                            applicantId: widget.applicantId,
+                            jobId: widget.jobId,
                           ),
                         );
                         ScaffoldMessenger.of(context).showSnackBar(

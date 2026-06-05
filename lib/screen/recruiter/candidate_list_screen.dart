@@ -84,14 +84,21 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                 final recruiterJobIds = recruiterJobs.map((job) => job.id).toSet();
 
                 // Get applications for recruiter's jobs only
-                final candidates = appProvider.applications
+                final candidatesRaw = appProvider.applications
                     .where((app) => recruiterJobIds.contains(app.jobId))
                     .toList();
+
+                // Deduplicate applications keeping the latest one of each candidate per job
+                final candidatesMap = <String, ApplicationModel>{};
+                for (var app in candidatesRaw) {
+                  candidatesMap['${app.applicantId}_${app.jobId}'] = app;
+                }
+                final candidates = candidatesMap.values.toList();
 
                 List<ApplicationModel> filtered = candidates;
                 if (_filterStatus != 'all') {
                   filtered = candidates.where((candidate) {
-                    final status = notifProvider.getCvDecision(candidate.applicantName);
+                    final status = notifProvider.getCvDecision('${candidate.applicantId}_${candidate.jobId}');
                     return status == _filterStatus;
                   }).toList();
                 }
@@ -159,7 +166,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final candidate = filtered[index];
-                    final status = notifProvider.getCvDecision(candidate.applicantName);
+                    final status = notifProvider.getCvDecision('${candidate.applicantId}_${candidate.jobId}');
                     return _buildCandidateCard(context, candidate, status);
                   },
                 );
@@ -352,7 +359,7 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                       print('Reject candidate: ${candidate.applicantName}');
                       context
                           .read<NotificationProvider>()
-                          .setCvDecision(candidate.applicantName, 'rejected');
+                          .setCvDecision('${candidate.applicantId}_${candidate.jobId}', 'rejected');
                       setState(() {});
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

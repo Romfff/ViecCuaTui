@@ -331,7 +331,7 @@ class _MarketTrendScreenState extends State<MarketTrendScreen> {
                             child: Align(
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                'AI đang phân tích...',
+                                'Bot đang gõ...',
                                 style: TextStyle(color: _kTextSub, fontSize: 11, fontStyle: FontStyle.italic),
                               ),
                             ),

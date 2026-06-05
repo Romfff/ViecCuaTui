@@ -234,6 +234,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
           cvFileName: _cvFileName,
           cvBytes: _cvFileBytes,
           cvBody: application.coverLetter,
+          applicantId: application.applicantId,
+          jobId: application.jobId,
         ),
       );
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ứng tuyển thành công. Nhà tuyển dụng sẽ liên hệ bạn sớm.')));
