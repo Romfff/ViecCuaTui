@@ -4,6 +4,7 @@ import '../models/interview_model.dart';
 
 class LocalDbService {
   static const String _interviewBoxName = 'interviews';
+  static const String _messageBoxName = 'messages';
   
   static final LocalDbService _instance = LocalDbService._privateConstructor();
   
@@ -12,6 +13,7 @@ class LocalDbService {
   static LocalDbService get instance => _instance;
   
   late Box<Map> _interviewBox;
+  late Box<Map> _messageBox;
   bool _isInitialized = false;
   
   // Initialize Hive
@@ -26,11 +28,30 @@ class LocalDbService {
       
       // Open box for interviews
       _interviewBox = await Hive.openBox<Map>(_interviewBoxName);
+      // Open box for chat messages
+      _messageBox = await Hive.openBox<Map>(_messageBoxName);
       _isInitialized = true;
       
       print('✓ Hive database initialized successfully');
     } catch (e) {
       print('❌ Error initializing Hive: $e');
+      rethrow;
+    }
+  }
+
+  // Save chat message (outgoing or incoming) to local Hive store
+  Future<void> saveChatMessage(Map<String, dynamic> message) async {
+    try {
+      final key = message['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+      // Ensure createdAt is stored as ISO string for portability
+      final stored = Map<String, dynamic>.from(message);
+      if (stored['createdAt'] is DateTime) {
+        stored['createdAt'] = (stored['createdAt'] as DateTime).toIso8601String();
+      }
+      await _messageBox.put(key, stored);
+      print('✓ Chat message saved to Hive: $key');
+    } catch (e) {
+      print('❌ Error saving chat message to Hive: $e');
       rethrow;
     }
   }
