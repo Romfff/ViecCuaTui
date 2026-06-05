@@ -16,6 +16,7 @@ import '../profile/profile_screen.dart';
 import 'chat_screen.dart';
 import 'filtered_job_list_screen.dart';
 import 'job_detail_screen.dart';
+import 'market_trend_screen.dart';
 
 const _kBg = Color(0xFFF8F9FB);
 const _kNavy = Color(0xFF0D1B4B);
@@ -1366,16 +1367,32 @@ class _LatestJobCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton.icon(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ChatScreen(
-                                sessionId: job.id,
-                                contactName: job.company,
-                                contactSubtitle: job.title,
+                          onPressed: () {
+                            if (auth.user == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Vui lòng đăng nhập để liên hệ'),
+                                ),
+                              );
+                              return;
+                            }
+                            final sessionId = "${auth.user!.uid}_${job.posterId}_${job.id}";
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ChatScreen(
+                                  sessionId: sessionId,
+                                  contactId: job.posterId,
+                                  contactName: job.company,
+                                  contactRole: 'job_poster',
+                                  contactSubtitle: job.title,
+                                  jobId: job.id,
+                                  jobTitle: job.title,
+                                  jobCompany: job.company,
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                           icon: const Icon(Icons.chat_bubble_outline, size: 18),
                           label: const Text('Liên hệ'),
                           style: OutlinedButton.styleFrom(

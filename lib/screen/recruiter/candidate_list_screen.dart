@@ -323,6 +323,10 @@ class _CandidateListScreenState extends State<CandidateListScreen> {
                             role: candidate.position,
                             cvBody: 'CV of ${candidate.applicantName}',
                             fromCandidateList: true,
+                            applicantId: candidate.applicantId,
+                            jobId: candidate.jobId,
+                            jobTitle: candidate.jobTitle,
+                            jobCompany: candidate.jobCompany,
                           ),
                         ),
                       ).then((_) {

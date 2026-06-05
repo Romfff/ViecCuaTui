@@ -13,12 +13,22 @@ class ChatScreen extends StatefulWidget {
   final String sessionId;
   final String contactName;
   final String contactSubtitle;
+  final String? contactId;
+  final String? contactRole;
+  final String? jobId;
+  final String? jobTitle;
+  final String? jobCompany;
 
   const ChatScreen({
     super.key,
     required this.sessionId,
     required this.contactName,
     required this.contactSubtitle,
+    this.contactId,
+    this.contactRole,
+    this.jobId,
+    this.jobTitle,
+    this.jobCompany,
   });
 
   @override
@@ -45,6 +55,13 @@ class _ChatScreenState extends State<ChatScreen> {
       senderName: senderName,
       senderRole: senderRole,
       text: text,
+      contactId: widget.contactId,
+      contactName: widget.contactName,
+      contactRole: widget.contactRole,
+      contactSubtitle: widget.contactSubtitle,
+      jobId: widget.jobId,
+      jobTitle: widget.jobTitle,
+      jobCompany: widget.jobCompany,
     );
 
     context.read<NotificationProvider>().addNotification(
@@ -77,7 +94,12 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final chatProv = context.watch<ChatProvider>();
-    final messages = chatProv.getMessages(widget.sessionId);
+
+    final otherPartyLabel = widget.contactRole == 'job_poster'
+        ? 'Công ty'
+        : (widget.contactRole == 'job_seeker'
+            ? 'Ứng viên'
+            : (auth.role == 'job_poster' ? 'Ứng viên' : 'Công ty'));
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -103,9 +125,9 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Công ty',
-                  style: TextStyle(
+                Text(
+                  otherPartyLabel,
+                  style: const TextStyle(
                     color: _kAccent,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -133,53 +155,73 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const Divider(height: 0),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                final message = messages[index];
-                final isMine = auth.user != null && message.senderId == auth.user!.uid;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Align(
-                    alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isMine ? _kAccent : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.03),
-                            blurRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (!isMine)
-                            Text(
-                              message.senderName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _kNavy,
-                                fontSize: 12,
+            child: StreamBuilder<List<ChatMessage>>(
+              stream: chatProv.streamMessages(widget.sessionId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Không tải được tin nhắn: ${snapshot.error}'),
+                  );
+                }
+
+                final messages = snapshot.data ?? [];
+                if (messages.isEmpty) {
+                  return const Center(child: Text('Chưa có tin nhắn nào.\nHãy bắt đầu cuộc trò chuyện!'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message = messages[index];
+                    final isMine = auth.user != null && message.senderId == auth.user!.uid;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Align(
+                        alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Container(
+                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isMine ? _kAccent : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 8,
                               ),
-                            ),
-                          if (!isMine) const SizedBox(height: 4),
-                          Text(
-                            message.text,
-                            style: TextStyle(
-                              color: isMine ? _kNavy : _kNavy,
-                              fontSize: 14,
-                            ),
+                            ],
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (!isMine)
+                                Text(
+                                  message.senderName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: _kNavy,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              if (!isMine) const SizedBox(height: 4),
+                              Text(
+                                message.text,
+                                style: const TextStyle(
+                                  color: _kNavy,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

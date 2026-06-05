@@ -290,6 +290,10 @@ class _DashboardPage extends StatelessWidget {
                   role: app.position,
                   match: matchPercent,
                   cvBody: app.coverLetter.isNotEmpty ? app.coverLetter : 'Hồ sơ ứng tuyển cho vị trí ${app.position}.',
+                  applicantId: app.applicantId,
+                  jobId: app.jobId,
+                  jobTitle: app.jobTitle,
+                  jobCompany: app.jobCompany,
                 );
               }).toList(),
           ],
@@ -929,11 +933,20 @@ class _StatCard extends StatelessWidget {
 
 class _CandidateItem extends StatelessWidget {
   final String name, role, match, cvBody;
+  final String? applicantId;
+  final String? jobId;
+  final String? jobTitle;
+  final String? jobCompany;
+
   const _CandidateItem({
     required this.name,
     required this.role,
     required this.match,
     required this.cvBody,
+    this.applicantId,
+    this.jobId,
+    this.jobTitle,
+    this.jobCompany,
   });
 
   @override
@@ -948,6 +961,10 @@ class _CandidateItem extends StatelessWidget {
               name: name,
               role: role,
               cvBody: cvBody,
+              applicantId: applicantId,
+              jobId: jobId,
+              jobTitle: jobTitle,
+              jobCompany: jobCompany,
             ),
           ),
         );

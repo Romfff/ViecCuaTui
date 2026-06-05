@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../models/notification_model.dart';
+import '../home/chat_screen.dart';
 import '../../models/interview_model.dart';
 import '../../provider/notification_provider.dart';
 import '../../provider/interview_provider.dart';
@@ -27,6 +28,10 @@ class CandidateCvDetailScreen extends StatefulWidget {
   final String? cvFileName;
   final Uint8List? cvBytes;
   final bool fromCandidateList;
+  final String? applicantId;
+  final String? jobId;
+  final String? jobTitle;
+  final String? jobCompany;
 
   const CandidateCvDetailScreen({
     super.key,
@@ -36,6 +41,10 @@ class CandidateCvDetailScreen extends StatefulWidget {
     this.cvFileName,
     this.cvBytes,
     this.fromCandidateList = false,
+    this.applicantId,
+    this.jobId,
+    this.jobTitle,
+    this.jobCompany,
   });
 
   @override
@@ -239,14 +248,46 @@ class _CandidateCvDetailScreenState extends State<CandidateCvDetailScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Tính năng liên hệ ứng viên sẽ được cập nhật sau.'),
+                  if (widget.applicantId == null || widget.applicantId!.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Không tìm thấy thông tin ứng viên để liên hệ'),
+                      ),
+                    );
+                    return;
+                  }
+                  final auth = context.read<AuthProvider>();
+                  if (auth.user == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Vui lòng đăng nhập để liên hệ'),
+                      ),
+                    );
+                    return;
+                  }
+                  final recruiterId = auth.user!.uid;
+                  final applicantId = widget.applicantId!;
+                  final jobId = widget.jobId ?? 'default_job';
+                  final sessionId = "${applicantId}_${recruiterId}_$jobId";
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        sessionId: sessionId,
+                        contactId: applicantId,
+                        contactName: widget.name,
+                        contactRole: 'job_seeker',
+                        contactSubtitle: widget.role,
+                        jobId: jobId,
+                        jobTitle: widget.jobTitle ?? widget.role,
+                        jobCompany: widget.jobCompany ?? 'Công ty của tôi',
+                      ),
                     ),
                   );
                 },
-                icon: const Icon(Icons.phone_android),
-                label: const Text('Liên hệ'),
+                icon: const Icon(Icons.chat_bubble_outline),
+                label: const Text('Liên hệ qua tin nhắn'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   side: const BorderSide(color: _kGreenAccent),
