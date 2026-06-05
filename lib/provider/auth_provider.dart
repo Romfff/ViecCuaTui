@@ -141,6 +141,17 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      print('Password reset email sent to $email');
+    } on FirebaseAuthException catch (e) {
+      throw Exception(e.message ?? 'Không thể gửi email đặt lại mật khẩu');
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
   Future<void> toggleBookmark(String jobId) async {
     if (user == null) return;
 

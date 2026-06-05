@@ -92,7 +92,14 @@ class LoginScreenState extends State<LoginScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildLabel('MẬT KHẨU'),
-                            const Text('QUÊN MẬT KHẨU?', style: TextStyle(color: _kAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                            if (_isLoginTab)
+                              GestureDetector(
+                                onTap: _showForgotPasswordDialog,
+                                child: const Text(
+                                  'QUÊN MẬT KHẨU?',
+                                  style: TextStyle(color: _kAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ),
                           ],
                         ),
                         TextFormField(
@@ -406,6 +413,68 @@ class LoginScreenState extends State<LoginScreen> {
         _isCheckingTax = false;
       });
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final forgotPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quên Mật Khẩu?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Nhập email của bạn và chúng tôi sẽ gửi hướng dẫn đặt lại mật khẩu.'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: forgotPasswordController,
+              decoration: InputDecoration(
+                hintText: 'Email của bạn',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Icons.email),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final email = forgotPasswordController.text.trim();
+              if (email.isEmpty || !email.contains('@')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vui lòng nhập email hợp lệ')),
+                );
+                return;
+              }
+
+              try {
+                final auth = context.read<AuthProvider>();
+                await auth.sendPasswordResetEmail(email);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Hướng dẫn đặt lại mật khẩu đã được gửi tới email của bạn')),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Lỗi: ${e.toString()}')),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _kAccent),
+            child: const Text('Gửi', style: TextStyle(color: _kNavy)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildTabItem(String title, bool isActive, VoidCallback onTap) {
