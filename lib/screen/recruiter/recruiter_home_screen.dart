@@ -9,6 +9,7 @@ import '../../provider/job_provider.dart';
 import '../../provider/notification_provider.dart';
 import '../../provider/interview_provider.dart';
 import '../../provider/application_provider.dart';
+import '../../provider/chat_provider.dart';
 import '../chat/chat_list_screen.dart';
 import '../notifications/notification_screen.dart';
 import 'candidate_cv_detail_screen.dart';
@@ -202,7 +203,7 @@ class _DashboardPage extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
+                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const ChatListScreen()),

@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../services/local_db_service.dart';
 
 class ChatSession {
   final String id;
@@ -234,6 +233,36 @@ class ChatProvider extends ChangeNotifier {
     String? jobCompany,
   }) async {
     final now = DateTime.now();
+
+    final jobSeekerId = senderRole == 'job_seeker' ? senderId : (contactId ?? '');
+    final jobSeekerName = senderRole == 'job_seeker' ? senderName : (contactName ?? '');
+    final recruiterId = senderRole == 'job_poster' ? senderId : (contactId ?? '');
+    final recruiterName = senderRole == 'job_poster' ? senderName : (contactName ?? '');
+
+    // 1. Create or update the session parent document FIRST using set(..., SetOptions(merge: true))
+    // This avoids calling sessionRef.get() which triggers PERMISSION_DENIED under get() rules if document does not exist.
+    final sessionRef = FirebaseFirestore.instance.collection('chat').doc(sessionId);
+    
+    final sessionData = {
+      'jobId': jobId ?? '',
+      'jobTitle': jobTitle ?? contactSubtitle ?? '',
+      'jobCompany': jobCompany ?? '',
+      'jobSeekerId': jobSeekerId,
+      'jobSeekerName': jobSeekerName,
+      'recruiterId': recruiterId,
+      'recruiterName': recruiterName,
+      'participants': [jobSeekerId, recruiterId],
+      'lastMessage': text,
+      'lastMessageAt': Timestamp.fromDate(now),
+      'createdAt': Timestamp.fromDate(now),
+    };
+
+    await sessionRef.set(sessionData, SetOptions(merge: true));
+
+    // Update the cache locally
+    _sessionsCache[sessionId] = ChatSession.fromMap(sessionId, sessionData);
+
+    // 2. Now write the message to the messages subcollection
     final messageRef = FirebaseFirestore.instance
         .collection('chat')
         .doc(sessionId)
@@ -252,55 +281,33 @@ class ChatProvider extends ChangeNotifier {
 
     // Save message
     await messageRef.set(message.toMap());
-    // Also persist outgoing message locally
-    try {
-      await LocalDbService.instance.saveChatMessage({
-        'id': messageRef.id,
-        'sessionId': sessionId,
-        'senderId': senderId,
-        'senderName': senderName,
-        'senderRole': senderRole,
-        'text': text,
-        'createdAt': now.toIso8601String(),
-      });
-    } catch (e) {
-      // Non-fatal local persistence error
-      print('Local save failed: $e');
+
+    notifyListeners();
+  }
+
+  // Delete session and all messages inside it
+  Future<void> deleteSession(String sessionId) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Get and delete all messages in messages subcollection
+    final messagesSnapshot = await firestore
+        .collection('chat')
+        .doc(sessionId)
+        .collection('messages')
+        .get();
+
+    final batch = firestore.batch();
+    for (var doc in messagesSnapshot.docs) {
+      batch.delete(doc.reference);
     }
 
-    // Update or create session
-    final sessionRef = FirebaseFirestore.instance.collection('chat').doc(sessionId);
-    final sessionDoc = await sessionRef.get();
+    // Delete session parent document
+    batch.delete(firestore.collection('chat').doc(sessionId));
 
-    if (!sessionDoc.exists) {
-      final jobSeekerId = senderRole == 'job_seeker' ? senderId : (contactId ?? '');
-      final jobSeekerName = senderRole == 'job_seeker' ? senderName : (contactName ?? '');
-      final recruiterId = senderRole == 'job_poster' ? senderId : (contactId ?? '');
-      final recruiterName = senderRole == 'job_poster' ? senderName : (contactName ?? '');
+    // Commit changes
+    await batch.commit();
 
-      final session = ChatSession(
-        id: sessionId,
-        jobId: jobId ?? '',
-        jobTitle: jobTitle ?? contactSubtitle ?? '',
-        jobCompany: jobCompany ?? '',
-        jobSeekerId: jobSeekerId,
-        jobSeekerName: jobSeekerName,
-        recruiterId: recruiterId,
-        recruiterName: recruiterName,
-        lastMessage: text,
-        lastMessageAt: now,
-        createdAt: now,
-      );
-
-      await sessionRef.set(session.toMap());
-      _sessionsCache[sessionId] = session;
-    } else {
-      await sessionRef.update({
-        'lastMessage': text,
-        'lastMessageAt': Timestamp.fromDate(now),
-      });
-    }
-
+    _sessionsCache.remove(sessionId);
     notifyListeners();
   }
 

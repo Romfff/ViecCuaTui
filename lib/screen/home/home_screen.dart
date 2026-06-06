@@ -9,6 +9,7 @@ import '../../models/interview_model.dart';
 import '../../provider/auth_provider.dart';
 import '../../provider/job_provider.dart';
 import '../../provider/interview_provider.dart';
+import '../../provider/chat_provider.dart';
 import '../../services/google_meet_service.dart';
 import '../chat/chat_list_screen.dart';
 import '../notifications/notification_screen.dart';
@@ -209,7 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
+                 GestureDetector(
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const ChatListScreen()),

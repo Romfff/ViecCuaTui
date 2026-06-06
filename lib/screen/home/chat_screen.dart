@@ -37,7 +37,6 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
-
   void _sendMessage() {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -93,7 +92,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final chatProv = context.watch<ChatProvider>();
+    final chatProv = context.read<ChatProvider>();
 
     final otherPartyLabel = widget.contactRole == 'job_poster'
         ? 'Công ty'
@@ -169,6 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 }
 
                 final messages = snapshot.data ?? [];
+
                 if (messages.isEmpty) {
                   return const Center(child: Text('Chưa có tin nhắn nào.\nHãy bắt đầu cuộc trò chuyện!'));
                 }
